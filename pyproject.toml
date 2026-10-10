@@ -10,7 +10,7 @@ dependencies = [
     "langchain>=1.4.4",
     "langchain-google-genai>=4.4.0",
     "langgraph-checkpoint-sqlite>=3.1.1",
-    "neatlogs[anthropic,google-genai]>=1.4.26",
+    "neatlogs[google-genai]>=1.4.26",
 ]
 
 [build-system]
@@ -19,5 +19,6 @@ build-backend = "uv_build"
 
 [dependency-groups]
 dev = [
+    "langgraph-cli[inmem]<0.3",
     "pytest>=9.1.1",
 ]
