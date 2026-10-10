@@ -110,6 +110,32 @@ def _case_exchange(db_path, case_id: str):
         conn.close()
 
 
+def _case_exchange_or_reused(db_path, case_id: str):
+    """This case's latest exchange, else the duplicate-reused one named
+    by its operation records."""
+    row = _case_exchange(db_path, case_id)
+    if row is not None:
+        return row
+    conn = sqlite3.connect(str(db_path))
+    conn.row_factory = sqlite3.Row
+    try:
+        op = conn.execute(
+            "SELECT result_json FROM operations WHERE case_id = ? "
+            "ORDER BY rowid DESC LIMIT 1", (case_id,)).fetchone()
+        if op is None:
+            return None
+        try:
+            exchange_id = json.loads(op["result_json"]).get("exchange_id")
+        except ValueError:
+            return None
+        if not exchange_id:
+            return None
+        return conn.execute("SELECT * FROM exchanges WHERE id = ?",
+                            (exchange_id,)).fetchone()
+    finally:
+        conn.close()
+
+
 def _escalation_reason(db_path, exchange_id: str) -> str:
     conn = sqlite3.connect(str(db_path))
     conn.row_factory = sqlite3.Row
@@ -134,7 +160,11 @@ def derive_outcome(ctx: AgentContext) -> dict:
     case = get_case(ctx.db_path, ctx.case_id)
     state = case["state"] if case else None
     if state == "arranged":
-        row = _case_exchange(ctx.db_path, ctx.case_id)
+        row = _case_exchange_or_reused(ctx.db_path, ctx.case_id)
+        if row is None:
+            return {"outcome": OUTCOME_ESCALATION, "exchange_id": None,
+                    "data": {"reason": "arranged case has no exchange row",
+                             "partial": "data inconsistent"}}
         hand = verify_exchange(ctx.db_path, row["id"])
         return {"outcome": OUTCOME_ARRANGED, "exchange_id": row["id"],
                 "data": {"exchange_id": row["id"],

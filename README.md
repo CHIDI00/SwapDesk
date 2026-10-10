@@ -2,7 +2,7 @@
 
 SwapDesk arranges shoe exchanges for a fictional shop. A customer asks for a different size, and the backend checks policy and stock, holds a replacement, creates a return and a mock label, then verifies the saved state. Every request ends in one of four outcomes: exchange arranged, clarification required, policy denial, or human escalation. All data is synthetic. There are no payments, shipments, or real customers.
 
-This repo holds the backend. It is a neatHack project, currently at Slice 4 of 7 (neatlogs and LangGraph agent). The HTTP API and demo do not exist yet.
+This repo holds the backend. It is a neatHack project, currently at Slice 5 of 7 (FastAPI for the frontend team). The demo does not exist yet.
 
 ## Features
 
@@ -105,6 +105,45 @@ What to inspect: expand the `agent` subgraph to see every model turn, tool call,
 
 Rules the graphs enforce: one isolated database per case under `studio_data/` (git-ignored); reusing a case id without `"resume": true` errors instead of resetting; resume preserves the case, operation keys, and thread state. Thread persistence comes from the serving platform, so the served graphs compile without a custom checkpointer (the server rejects one); tests pass an explicit file saver to the same builders. The request cap counts every model request including retries and refuses past the budget; the recursion limit alone is not a request budget. Demo scenarios use fresh `DEMO-*` cases only and never load the frozen benchmark, so holdouts stay out of demo tuning. Opening Studio, importing the graphs, and running offline tests make zero model requests.
 
+## API for frontend teammates
+
+```bash
+uv run uvicorn swapdesk.api:app
+```
+
+Interactive docs at `http://127.0.0.1:8000/docs` (generated from the implementation, always in sync). The demo database is `swapdesk.db` (override with `SWAPDESK_DB`); restarting reuses it, fixtures seed once.
+
+| Method & route | What it does |
+|---|---|
+| `POST /v1/tickets` | Submit a ticket, run it to a verified outcome (201) |
+| `GET /v1/cases/{id}` | Verified status, outcome, reply, run ids (404 unknown) |
+| `GET /v1/cases/{id}/timeline` | Sanitized action/journal events (404 unknown) |
+| `POST /v1/cases/{id}/continue` | Continue with message/consent (404 unknown, 422 uncontinuable) |
+| `GET /v1/fixtures` | Synthetic orders, items, and policy for dropdowns |
+| `POST /v1/demo/faults` | Demo-only: arm one failure on an operation key |
+| `DELETE /v1/demo/faults` | Demo-only: disarm all failures |
+| `GET /v1/health` | Liveness probe |
+
+Outcomes (`arranged`, `clarification`, `denial`, `escalation`) always return 200 with an `outcome` field — a denial is an answer, not an error. Only malformed requests (422), unknown cases (404), and unexpected failures (500, generic message) are HTTP errors.
+
+```bash
+curl -X POST localhost:8000/v1/tickets \
+  -H 'Content-Type: application/json' \
+  -d '{"order_id":"ORD-1001","order_item_id":"ITEM-01","size":"42"}'
+
+curl localhost:8000/v1/cases/CASE-xxx
+curl localhost:8000/v1/cases/CASE-xxx/timeline
+curl -X POST localhost:8000/v1/cases/CASE-xxx/continue \
+  -H 'Content-Type: application/json' \
+  -d '{"consent_size":"42","order_id":"ORD-1005","order_item_id":"ITEM-06","size":"43"}'
+
+curl -X POST localhost:8000/v1/demo/faults \
+  -H 'Content-Type: application/json' \
+  -d '{"case_id":"DEMO-1","run_id":"RUN-1","step":"reserve","point":"transient","times":2}'
+```
+
+No authentication: this is a local mock. Execution runs synchronously per request, so status reads are never blocked.
+
 ## Configuration
 
 - Return window and eligibility live in `src/swapdesk/policy.py` (`RETURN_WINDOW_DAYS = 30`).
@@ -122,11 +161,15 @@ src/swapdesk/
   policy.py      Eligibility rules
   fixtures.py    Synthetic shop data
   operations.py  reserve/return/label/finalize/release/cancel/escalate/verify
+  service.py     Deterministic ticket submit/continue/status for the API
+  api.py         FastAPI routes, schemas, demo fault controls
   faults.py      Demo-only failure injection (tests, never production)
   checker.py     Deterministic benchmark checker (no LLM judge)
   telemetry.py   neatlogs init/wrap/flush (local-only without a key)
   agent/
-    tools.py     Curated LangChain tools bound to one case run
+    tools.py     Curated LangChain tools; identity injected per run
+    context.py   Shared state, identity + budget middleware
+    scripted.py  Offline scenario doubles (wiring only, never model proof)
     prompts.py   System prompt and verified reply templates
     graph.py     create_agent wiring, bounded runs, DB-derived outcomes
 eval/
@@ -139,9 +182,11 @@ tests/
   test_exchange.py
   test_checker.py
   test_freeze.py
-```
+  test_agent.py
+  test_studio.py
+  test_api.py```
 
-Build progress lives in [hackathon.md](hackathon.md). The full plan is in [SwapDesk neatHack Build Plan.md](SwapDesk%20neatHack%20Build%20Plan.md) (spec, not evidence).
+Build progress lives in [hackathon.md](hackathon.md). The full plan is in [docs/build-plan.md](docs/build-plan.md) (spec, not evidence).
 
 ## Development and testing
 
