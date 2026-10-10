@@ -1,0 +1,554 @@
+{
+  "failed": 0,
+  "generated_at": "2026-10-10T07:11:13+00:00",
+  "passed": 42,
+  "runs": [
+    {
+      "benchmark_version": "benchmark-v1",
+      "case_id": "A1-plain",
+      "failures": [],
+      "observed": {
+        "duplicate": false,
+        "exchange_id": "EXC-ITEM-01-1",
+        "outcome": "arranged",
+        "status": "arranged"
+      },
+      "passed": true,
+      "repeat": 1
+    },
+    {
+      "benchmark_version": "benchmark-v1",
+      "case_id": "A1-plain",
+      "failures": [],
+      "observed": {
+        "duplicate": false,
+        "exchange_id": "EXC-ITEM-01-1",
+        "outcome": "arranged",
+        "status": "arranged"
+      },
+      "passed": true,
+      "repeat": 2
+    },
+    {
+      "benchmark_version": "benchmark-v1",
+      "case_id": "A1-plain",
+      "failures": [],
+      "observed": {
+        "duplicate": false,
+        "exchange_id": "EXC-ITEM-01-1",
+        "outcome": "arranged",
+        "status": "arranged"
+      },
+      "passed": true,
+      "repeat": 3
+    },
+    {
+      "benchmark_version": "benchmark-v1",
+      "case_id": "A2-plain-44",
+      "failures": [],
+      "observed": {
+        "duplicate": false,
+        "exchange_id": "EXC-ITEM-04-1",
+        "outcome": "arranged",
+        "status": "arranged"
+      },
+      "passed": true,
+      "repeat": 1
+    },
+    {
+      "benchmark_version": "benchmark-v1",
+      "case_id": "A3-second-pool",
+      "failures": [],
+      "observed": {
+        "duplicate": false,
+        "exchange_id": "EXC-ITEM-07-1",
+        "outcome": "arranged",
+        "status": "arranged"
+      },
+      "passed": true,
+      "repeat": 1
+    },
+    {
+      "benchmark_version": "benchmark-v1",
+      "case_id": "A4-single-unit",
+      "failures": [],
+      "observed": {
+        "duplicate": false,
+        "exchange_id": "EXC-ITEM-03-1",
+        "outcome": "arranged",
+        "status": "arranged"
+      },
+      "passed": true,
+      "repeat": 1
+    },
+    {
+      "benchmark_version": "benchmark-v1",
+      "case_id": "A5-label-timeout",
+      "failures": [],
+      "observed": {
+        "duplicate": false,
+        "exchange_id": "EXC-ITEM-01-1",
+        "outcome": "arranged",
+        "status": "arranged"
+      },
+      "passed": true,
+      "repeat": 1
+    },
+    {
+      "benchmark_version": "benchmark-v1",
+      "case_id": "A6-crash-recovery",
+      "failures": [],
+      "observed": {
+        "duplicate": false,
+        "exchange_id": "EXC-ITEM-03-1",
+        "outcome": "arranged",
+        "status": "arranged"
+      },
+      "passed": true,
+      "repeat": 1
+    },
+    {
+      "benchmark_version": "benchmark-v1",
+      "case_id": "A6-crash-recovery",
+      "failures": [],
+      "observed": {
+        "duplicate": false,
+        "exchange_id": "EXC-ITEM-03-1",
+        "outcome": "arranged",
+        "status": "arranged"
+      },
+      "passed": true,
+      "repeat": 2
+    },
+    {
+      "benchmark_version": "benchmark-v1",
+      "case_id": "A6-crash-recovery",
+      "failures": [],
+      "observed": {
+        "duplicate": false,
+        "exchange_id": "EXC-ITEM-03-1",
+        "outcome": "arranged",
+        "status": "arranged"
+      },
+      "passed": true,
+      "repeat": 3
+    },
+    {
+      "benchmark_version": "benchmark-v1",
+      "case_id": "A7-transient",
+      "failures": [],
+      "observed": {
+        "duplicate": false,
+        "exchange_id": "EXC-ITEM-04-1",
+        "outcome": "arranged",
+        "status": "arranged"
+      },
+      "passed": true,
+      "repeat": 1
+    },
+    {
+      "benchmark_version": "benchmark-v1",
+      "case_id": "A8-vanish-once",
+      "failures": [],
+      "observed": {
+        "duplicate": false,
+        "exchange_id": "EXC-ITEM-01-1",
+        "outcome": "arranged",
+        "status": "arranged"
+      },
+      "passed": true,
+      "repeat": 1
+    },
+    {
+      "benchmark_version": "benchmark-v1",
+      "case_id": "A9-rerun",
+      "failures": [],
+      "observed": {
+        "duplicate": true,
+        "exchange_id": "EXC-ITEM-01-1",
+        "outcome": "arranged",
+        "status": "arranged"
+      },
+      "passed": true,
+      "repeat": 1
+    },
+    {
+      "benchmark_version": "benchmark-v1",
+      "case_id": "A9-rerun",
+      "failures": [],
+      "observed": {
+        "duplicate": true,
+        "exchange_id": "EXC-ITEM-01-1",
+        "outcome": "arranged",
+        "status": "arranged"
+      },
+      "passed": true,
+      "repeat": 2
+    },
+    {
+      "benchmark_version": "benchmark-v1",
+      "case_id": "A9-rerun",
+      "failures": [],
+      "observed": {
+        "duplicate": true,
+        "exchange_id": "EXC-ITEM-01-1",
+        "outcome": "arranged",
+        "status": "arranged"
+      },
+      "passed": true,
+      "repeat": 3
+    },
+    {
+      "benchmark_version": "benchmark-v1",
+      "case_id": "A10-cross-case",
+      "failures": [],
+      "observed": {
+        "duplicate": true,
+        "exchange_id": "EXC-ITEM-07-1",
+        "outcome": "arranged",
+        "status": "arranged"
+      },
+      "passed": true,
+      "repeat": 1
+    },
+    {
+      "benchmark_version": "benchmark-v1",
+      "case_id": "A11-cancel-fresh",
+      "failures": [],
+      "observed": {
+        "duplicate": true,
+        "exchange_id": "EXC-ITEM-01-1",
+        "outcome": "arranged",
+        "status": "arranged"
+      },
+      "passed": true,
+      "repeat": 1
+    },
+    {
+      "benchmark_version": "benchmark-v1",
+      "case_id": "A12-cross-run",
+      "failures": [],
+      "observed": {
+        "duplicate": false,
+        "exchange_id": "EXC-ITEM-04-1",
+        "outcome": "arranged",
+        "status": "arranged"
+      },
+      "passed": true,
+      "repeat": 1
+    },
+    {
+      "benchmark_version": "benchmark-v1",
+      "case_id": "A13-multi-unit",
+      "failures": [],
+      "observed": {
+        "duplicate": false,
+        "exchange_id": "EXC-ITEM-01-1",
+        "outcome": "arranged",
+        "status": "arranged"
+      },
+      "passed": true,
+      "repeat": 1
+    },
+    {
+      "benchmark_version": "benchmark-v1",
+      "case_id": "A14-exact-fit",
+      "failures": [],
+      "observed": {
+        "duplicate": false,
+        "exchange_id": "EXC-ITEM-07-1",
+        "outcome": "arranged",
+        "status": "arranged"
+      },
+      "passed": true,
+      "repeat": 1
+    },
+    {
+      "benchmark_version": "benchmark-v1",
+      "case_id": "S1-consent-alt",
+      "failures": [],
+      "observed": {
+        "duplicate": false,
+        "exchange_id": "EXC-ITEM-06-1",
+        "outcome": "arranged",
+        "status": "arranged"
+      },
+      "passed": true,
+      "repeat": 1
+    },
+    {
+      "benchmark_version": "benchmark-v1",
+      "case_id": "D1-final-sale",
+      "failures": [],
+      "observed": {
+        "duplicate": false,
+        "exchange_id": null,
+        "outcome": "denied",
+        "status": null
+      },
+      "passed": true,
+      "repeat": 1
+    },
+    {
+      "benchmark_version": "benchmark-v1",
+      "case_id": "D1-final-sale",
+      "failures": [],
+      "observed": {
+        "duplicate": false,
+        "exchange_id": null,
+        "outcome": "denied",
+        "status": null
+      },
+      "passed": true,
+      "repeat": 2
+    },
+    {
+      "benchmark_version": "benchmark-v1",
+      "case_id": "D1-final-sale",
+      "failures": [],
+      "observed": {
+        "duplicate": false,
+        "exchange_id": null,
+        "outcome": "denied",
+        "status": null
+      },
+      "passed": true,
+      "repeat": 3
+    },
+    {
+      "benchmark_version": "benchmark-v1",
+      "case_id": "D2-window",
+      "failures": [],
+      "observed": {
+        "duplicate": false,
+        "exchange_id": null,
+        "outcome": "denied",
+        "status": null
+      },
+      "passed": true,
+      "repeat": 1
+    },
+    {
+      "benchmark_version": "benchmark-v1",
+      "case_id": "D3-not-delivered",
+      "failures": [],
+      "observed": {
+        "duplicate": false,
+        "exchange_id": null,
+        "outcome": "denied",
+        "status": null
+      },
+      "passed": true,
+      "repeat": 1
+    },
+    {
+      "benchmark_version": "benchmark-v1",
+      "case_id": "D4-consent-no-override",
+      "failures": [],
+      "observed": {
+        "duplicate": false,
+        "exchange_id": null,
+        "outcome": "denied",
+        "status": null
+      },
+      "passed": true,
+      "repeat": 1
+    },
+    {
+      "benchmark_version": "benchmark-v1",
+      "case_id": "C1-unknown-item",
+      "failures": [],
+      "observed": {
+        "duplicate": false,
+        "exchange_id": null,
+        "outcome": "clarification",
+        "status": null
+      },
+      "passed": true,
+      "repeat": 1
+    },
+    {
+      "benchmark_version": "benchmark-v1",
+      "case_id": "C2-mismatch",
+      "failures": [],
+      "observed": {
+        "duplicate": false,
+        "exchange_id": null,
+        "outcome": "clarification",
+        "status": null
+      },
+      "passed": true,
+      "repeat": 1
+    },
+    {
+      "benchmark_version": "benchmark-v1",
+      "case_id": "C3-out-of-stock",
+      "failures": [],
+      "observed": {
+        "duplicate": false,
+        "exchange_id": null,
+        "outcome": "clarification",
+        "status": null
+      },
+      "passed": true,
+      "repeat": 1
+    },
+    {
+      "benchmark_version": "benchmark-v1",
+      "case_id": "C3-out-of-stock",
+      "failures": [],
+      "observed": {
+        "duplicate": false,
+        "exchange_id": null,
+        "outcome": "clarification",
+        "status": null
+      },
+      "passed": true,
+      "repeat": 2
+    },
+    {
+      "benchmark_version": "benchmark-v1",
+      "case_id": "C3-out-of-stock",
+      "failures": [],
+      "observed": {
+        "duplicate": false,
+        "exchange_id": null,
+        "outcome": "clarification",
+        "status": null
+      },
+      "passed": true,
+      "repeat": 3
+    },
+    {
+      "benchmark_version": "benchmark-v1",
+      "case_id": "C4-no-size",
+      "failures": [],
+      "observed": {
+        "duplicate": false,
+        "exchange_id": null,
+        "outcome": "clarification",
+        "status": null
+      },
+      "passed": true,
+      "repeat": 1
+    },
+    {
+      "benchmark_version": "benchmark-v1",
+      "case_id": "C5-qty-short",
+      "failures": [],
+      "observed": {
+        "duplicate": false,
+        "exchange_id": null,
+        "outcome": "clarification",
+        "status": null
+      },
+      "passed": true,
+      "repeat": 1
+    },
+    {
+      "benchmark_version": "benchmark-v1",
+      "case_id": "E1-cleanup-stuck",
+      "failures": [],
+      "observed": {
+        "duplicate": false,
+        "exchange_id": "EXC-ITEM-01-1",
+        "outcome": "escalated",
+        "status": "cleanup_pending"
+      },
+      "passed": true,
+      "repeat": 1
+    },
+    {
+      "benchmark_version": "benchmark-v1",
+      "case_id": "E1-cleanup-stuck",
+      "failures": [],
+      "observed": {
+        "duplicate": false,
+        "exchange_id": "EXC-ITEM-01-1",
+        "outcome": "escalated",
+        "status": "cleanup_pending"
+      },
+      "passed": true,
+      "repeat": 2
+    },
+    {
+      "benchmark_version": "benchmark-v1",
+      "case_id": "E1-cleanup-stuck",
+      "failures": [],
+      "observed": {
+        "duplicate": false,
+        "exchange_id": "EXC-ITEM-01-1",
+        "outcome": "escalated",
+        "status": "cleanup_pending"
+      },
+      "passed": true,
+      "repeat": 3
+    },
+    {
+      "benchmark_version": "benchmark-v1",
+      "case_id": "E2-vanish-always",
+      "failures": [],
+      "observed": {
+        "duplicate": false,
+        "exchange_id": null,
+        "outcome": "escalated",
+        "status": null
+      },
+      "passed": true,
+      "repeat": 1
+    },
+    {
+      "benchmark_version": "benchmark-v1",
+      "case_id": "E3-late-abandon",
+      "failures": [],
+      "observed": {
+        "duplicate": false,
+        "exchange_id": "EXC-ITEM-03-1",
+        "outcome": "escalated",
+        "status": "escalated"
+      },
+      "passed": true,
+      "repeat": 1
+    },
+    {
+      "benchmark_version": "benchmark-v1",
+      "case_id": "E4-transient-always",
+      "failures": [],
+      "observed": {
+        "duplicate": false,
+        "exchange_id": null,
+        "outcome": "escalated",
+        "status": null
+      },
+      "passed": true,
+      "repeat": 1
+    },
+    {
+      "benchmark_version": "benchmark-v1",
+      "case_id": "E5-cleanup-retry",
+      "failures": [],
+      "observed": {
+        "duplicate": false,
+        "exchange_id": "EXC-ITEM-01-1",
+        "outcome": "escalated",
+        "status": "escalated"
+      },
+      "passed": true,
+      "repeat": 1
+    },
+    {
+      "benchmark_version": "benchmark-v1",
+      "case_id": "E6-clean-abandon",
+      "failures": [],
+      "observed": {
+        "duplicate": false,
+        "exchange_id": "EXC-ITEM-07-1",
+        "outcome": "escalated",
+        "status": "escalated"
+      },
+      "passed": true,
+      "repeat": 1
+    }
+  ],
+  "total": 42
+}
