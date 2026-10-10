@@ -21,6 +21,21 @@ Contact details shared in chat are withheld from this public log.
 
 ## Build log
 
+### 2026-10-10 20:50 +01:00 - Runner/harness evidence saved for submission
+
+Completed:
+
+- Evidence doc `docs/EVIDENCE_RUNNER_HARNESS.md`: controlled 2-run live comparison of the D1-final-sale denial evidence path. BEFORE (controlled reproduction, trace `79a02458…`) loses the persisted reason (`expected message containing 'final sale', got ''`); AFTER (trace `8d4b7cc8…`) preserves it, checker passes, zero side effects in both. Diagnostic trace `0b32a1f5…` retained as reference. Fix commit `90c89d8`, checkpoint `01M4KJS2K88G9T2AWH11WVZG44`. Runner/harness correctness only; no model-reasoning claim.
+- Sanitized: trace IDs plus synthetic fixture data only. No credentials, keys, session transcripts, temp worktrees, databases, or experimental code committed.
+
+Gaps (explicitly pending):
+
+- No full 42-run re-baseline; V1/V2 scores provisional. Recovery paths and model decision errors (v2 A13/C3) uncovered. No video, X post, or submission artifacts.
+
+Tests run: none (packaging only; prior deterministic suite 106 passed, 1 skipped).
+
+Failures: none.
+
 ### 2026-10-10 09:00 +01:00 - Anthropic removal, commit convention, Gemini key test
 
 Completed:
