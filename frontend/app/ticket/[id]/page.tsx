@@ -1,5 +1,6 @@
 "use client";
 
+import { Suspense } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { ArrowLeft, Clock3, ShieldAlert, ShieldCheck } from "lucide-react";
@@ -33,7 +34,7 @@ const steps = [
   },
 ];
 
-export default function TicketDetailPage() {
+function TicketDetailContent() {
   const params = useParams<{ id: string }>();
   const id = params?.id;
   const { getTicket } = useSwapDesk();
@@ -110,5 +111,24 @@ export default function TicketDetailPage() {
         )}
       </div>
     </AppShell>
+  );
+}
+
+function TicketDetailFallback() {
+  return (
+    <div className="mx-auto w-full max-w-6xl px-4 py-6 sm:px-6 lg:px-8">
+      <div className="panel flex items-center gap-3 p-6">
+        <span className="h-2 w-2 rounded-full bg-success pulse-dot" />
+        <p className="text-sm text-muted-foreground">Loading ticket…</p>
+      </div>
+    </div>
+  );
+}
+
+export default function TicketDetailPage() {
+  return (
+    <Suspense fallback={<TicketDetailFallback />}>
+      <TicketDetailContent />
+    </Suspense>
   );
 }
