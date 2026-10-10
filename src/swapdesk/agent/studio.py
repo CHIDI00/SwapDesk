@@ -7,27 +7,18 @@
   budget plus SWAPDESK_MODEL and GEMINI_API_KEY; anything missing fails
   loudly before any model call. No live calls happen unless a budgeted
   smoke test is explicitly invoked.
+
+Persistence note: the served graphs are compiled WITHOUT a checkpointer
+because the LangGraph platform provides thread persistence automatically
+(a custom SqliteSaver is rejected at load). Resume still works: threads
+persist server-side, while case isolation, operation keys, and business
+state live in the case database. Tests pass an explicit file saver to
+the same builders.
 """
 
 from __future__ import annotations
 
-import os
-import sqlite3
-from pathlib import Path
+from swapdesk.agent.studio_flow import build_live_graph, build_offline_graph
 
-from langgraph.checkpoint.sqlite import SqliteSaver
-
-from swapdesk.agent.studio_flow import (
-    STUDIO_ROOT,
-    build_live_graph,
-    build_offline_graph,
-)
-
-# Env-aware so tests stay out of the repo tree; the server uses the default.
-_threads_db = Path(os.environ.get("SWAPDESK_STUDIO_ROOT", STUDIO_ROOT)) / "studio_threads.db"
-_threads_db.parent.mkdir(parents=True, exist_ok=True)
-_saver_conn = sqlite3.connect(str(_threads_db), check_same_thread=False)
-_saver = SqliteSaver(_saver_conn)
-
-offline_graph = build_offline_graph(checkpointer=_saver)
-live_graph = build_live_graph(checkpointer=_saver)
+offline_graph = build_offline_graph()
+live_graph = build_live_graph()

@@ -43,7 +43,6 @@ from .prompts import render_reply
 from .scripted import SCENARIOS, WIRING_LABEL, script_for
 
 STUDIO_ROOT = Path("studio_data")
-THREADS_DB = STUDIO_ROOT / "studio_threads.db"
 DEFAULT_RUN_ID = "RUN-1"
 
 
