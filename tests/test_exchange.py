@@ -9,6 +9,7 @@ from swapdesk import (
     OperationError,
     PayloadMismatchError,
     ReleaseFailedError,
+    ReservationError,
     TransientError,
     WorkerCrashedError,
     cancel_exchange,
@@ -20,6 +21,7 @@ from swapdesk import (
     get_case,
     get_operation_status,
     note_case,
+    record_escalation,
     release_reservation,
     reserve_replacement,
     verify_exchange,
@@ -293,3 +295,33 @@ def test_case_notes_have_no_fulfillment_effect(shop):
     assert table_count(shop, "operations") == 0
     with pytest.raises(OperationError):
         note_case(shop, case_id="CASE-20", state="bogus-state")
+
+
+def test_blank_terminal_notes_are_rejected(shop):
+    with pytest.raises(OperationError):
+        note_case(shop, case_id='CASE-30', state='denied', detail='   ')
+    with pytest.raises(OperationError):
+        note_case(shop, case_id='CASE-30', state='needs_information')
+    with pytest.raises(OperationError):
+        record_escalation(shop, case_id='CASE-30', run_id='RUN-30', op_key='OP-E', reason='')
+    assert get_case(shop, 'CASE-30') is None
+
+
+def test_unconsented_substitution_is_rejected(shop):
+    before = stock_snapshot(shop)
+    with pytest.raises(ReservationError):
+        reserve_replacement(shop, case_id='CASE-31', run_id='RUN-31', op_key='OP-S', order_id='ORD-1005', order_item_id='ITEM-06', size='42', requested_size='43')
+    assert stock_snapshot(shop) == before
+    ok = reserve_replacement(shop, case_id='CASE-31', run_id='RUN-31', op_key='OP-S2', order_id='ORD-1005', order_item_id='ITEM-06', size='42', requested_size='43', consent=True)
+    assert ok.status == 'replacement_reserved'
+
+
+def test_escalation_without_exchange_is_journaled(shop):
+    first = record_escalation(shop, case_id='CASE-32', run_id='RUN-32', op_key='OP-X', reason='repeated stock failures')
+    assert first.status == 'escalated' and first.duplicate is False
+    second = record_escalation(shop, case_id='CASE-32', run_id='RUN-32', op_key='OP-X', reason='repeated stock failures')
+    assert second.duplicate is True
+    status = get_operation_status(shop, 'OP-X')
+    assert status['status'] == 'committed'
+    assert get_case(shop, 'CASE-32')['state'] == 'escalated'
+

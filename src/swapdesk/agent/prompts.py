@@ -21,8 +21,11 @@ Rules you must follow:
   with the SAME arguments after an error is always safe. Never invent a
   new key to dodge an error; query get_operation_status first when a
   crash or timeout leaves a write uncertain.
+- Escalate with escalate_to_human when an exchange was started, or
+  escalate_without_exchange when no exchange was started.
 - Finish by calling exactly one of: finalize the arranged flow, or
-  record_denial, record_clarification, escalate_to_human, cancel_exchange.
+  record_denial, record_clarification, escalate_to_human,
+  escalate_without_exchange, cancel_exchange.
 - Keep decision reasons to one line per tool call in your replies to the
   orchestrator; the customer reply is rendered from verified state.
 """
