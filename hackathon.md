@@ -21,6 +21,37 @@ Contact details shared in chat are withheld from this public log.
 
 ## Build log
 
+### 2026-10-10 09:00 +01:00 - Anthropic removal, commit convention, Gemini key test
+
+Completed:
+
+- Anthropic endpoint fully removed from the repo: no code/config references it (grep clean across `src/`, `eval/`, `tests/`, `.opencode/`, `opencode.json`, `README.md`, `pyproject.toml`); orphaned `anthropic` package dropped via `uv sync`. One inert transitive shim remains (`openinference-instrumentation-anthropic`, required unconditionally by `neatlogs` itself): no endpoint, no credentials, never imported. Suite still 46 passed.
+- Convention recorded (user instruction): no "slice" in commit messages going forward. Past messages keep their history (rewriting would break Entire checkpoint linkage).
+- Gemini key test, max two API calls, values never printed: CALL1 raw ping → error `ConnectError [SSL: UNEXPECTED_EOF_WHILE_READING]` at the TLS handshake; CALL2 correctly skipped, one call spent. Verdict: error at the network layer, key itself unevaluated. Dashboard check is moot until egress works.
+
+Gaps:
+
+- `ANTHROPIC_API_KEY` / `ANTHROPIC_AUTH_TOKEN` / `ANTHROPIC_BASE_URL` still exist in the machine's shell environment (outside the repo, nothing reads them). Removing them is a machine-level action for the user.
+- Live Gemini + neatlogs export still unverified from here; needs working egress, then a dashboard confirmation.
+
+### 2026-10-10 08:54 +01:00 - Local Studio server running
+
+Completed:
+
+- Added a Studio entrypoint (`src/swapdesk/agent/studio.py`, exact production wiring, local stand-in model) plus `langgraph.json`. Graph compiles offline with no database side effects.
+- Installed `langgraph-cli[inmem]` pinned below 0.4 as a dev dependency. The current CLI release would not resolve: `neatlogs` pulls `autogen-core`, which caps protobuf below 5.30, while the new server needs protobuf 6.32 or higher.
+- Narrowed `neatlogs[anthropic,google-genai]` to `neatlogs[google-genai]`. This also drops the last Anthropic packages from the environment. Suite still 46 passed.
+- Fixed a server startup failure: Studio loads the entrypoint without package context, so the entrypoint now uses absolute imports. Server auto-reloaded and registered the `swapdesk_agent` assistant.
+- Server: API `http://127.0.0.1:8123`, docs `http://127.0.0.1:8123/docs`, Studio `https://smith.langchain.com/studio/?baseUrl=http://127.0.0.1:8123`.
+
+Planned:
+
+- Live runs from Studio still need `SWAPDESK_MODEL` in `.env` plus working egress to Google APIs. The stand-in only draws the graph.
+
+Tests run: `uv run pytest -q` (46 passed, same known shutdown log noise).
+
+Failures: two setup failures, both fixed same session (missing `inmem` server package; relative import in Studio entrypoint).
+
 ### 2026-10-10 08:32 +01:00 - Slice 4: neatlogs and LangGraph agent done
 
 Completed:
