@@ -40,6 +40,19 @@ Tests run: `uv run pytest -q` (3 runs, 8 passed each).
 
 Failures: one test design failure during development (see above), fixed same session.
 
+### 2026-10-10 06:58 +01:00 - README rewritten
+
+Completed:
+
+- Replaced the one-line README with onboarding docs: value prop, install, runnable quickstart, config, structure, testing, contributing, license placeholder. No emojis.
+- Verified both usage snippets run verbatim against a scratch database (since deleted). Clone URL matches `origin`.
+- Could not run the skill audit script: Ruby is not installed on this machine, so the checklist above was applied by hand instead.
+
+Planned:
+
+- Choose a license before anyone reuses this code.
+- Revisit README in Slice 5 when real API routes exist.
+
 ### 2026-10-10 06:48 +01:00 - Milestone 1: Entire session capture verified end-to-end (prior session)
 
 - Goal: verify Entire agent capture works before feature development.
