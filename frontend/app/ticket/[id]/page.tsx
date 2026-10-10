@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import { ArrowLeft, ShieldAlert, ShieldCheck } from "lucide-react";
+import { ArrowLeft, Clock3, ShieldAlert, ShieldCheck } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
 import { useSwapDesk } from "@/store/swapdesk";
 
@@ -63,8 +63,8 @@ export default function TicketDetailPage() {
           <>
             <section className="grid gap-3 sm:grid-cols-3">
               <div className="panel flex items-center gap-3 p-4">
-                <span className={`grid h-9 w-9 shrink-0 place-items-center rounded-xl border ${ticket.status === "escalated" ? "border-warning/15 bg-warning/[0.07] text-warning" : "border-success/15 bg-success/[0.07] text-success"}`}>
-                  {ticket.status === "escalated" ? <ShieldAlert className="h-4 w-4" /> : <ShieldCheck className="h-4 w-4" />}
+                <span className={`grid h-9 w-9 shrink-0 place-items-center rounded-xl border ${ticket.status === "escalated" ? "border-warning/15 bg-warning/[0.07] text-warning" : ticket.status === "processing" ? "border-primary/15 bg-primary/[0.07] text-primary" : "border-success/15 bg-success/[0.07] text-success"}`}>
+                  {ticket.status === "escalated" ? <ShieldAlert className="h-4 w-4" /> : ticket.status === "processing" ? <Clock3 className="h-4 w-4" /> : <ShieldCheck className="h-4 w-4" />}
                 </span>
                 <div className="min-w-0">
                   <p className="text-xs text-muted-foreground">Status</p>

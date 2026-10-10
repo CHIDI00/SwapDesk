@@ -2,7 +2,7 @@
 
 import { createContext, useCallback, useContext, useMemo, useRef, useState, type ReactNode } from "react";
 
-export type TicketStatus = "resolved" | "escalated";
+export type TicketStatus = "resolved" | "escalated" | "processing";
 
 export type Ticket = {
   id: string;
@@ -74,6 +74,7 @@ type SwapDeskContextValue = {
   tickets: Ticket[];
   inventory: InventoryItem[];
   simulateTicket: () => Ticket;
+  submitCustomerTicket: (message: string) => Ticket;
   resetMockData: () => void;
   getTicket: (id: string) => Ticket | undefined;
 };
@@ -98,6 +99,21 @@ export function SwapDeskProvider({ children }: { children: ReactNode }) {
     return ticket;
   }, []);
 
+  const submitCustomerTicket = useCallback((message: string) => {
+    const text = message.trim() || "My Jordan 4s arrived but are too tight. I need to exchange for a size 43.";
+    const ticket: Ticket = {
+      id: `TCK-${seq.current++}`,
+      message: text,
+      status: "processing",
+      statusLabel: "Agent Processing",
+      actions: ["INTAKE", "ROUTING"],
+      time: "Just now",
+      sku: "AJ4-MIL-43",
+    };
+    setTickets((prev) => [ticket, ...prev]);
+    return ticket;
+  }, []);
+
   const resetMockData = useCallback(() => {
     setTickets([]);
     setInventory(createInitialInventory());
@@ -106,8 +122,8 @@ export function SwapDeskProvider({ children }: { children: ReactNode }) {
   const getTicket = useCallback((id: string) => tickets.find((ticket) => ticket.id === id), [tickets]);
 
   const value = useMemo(
-    () => ({ tickets, inventory, simulateTicket, resetMockData, getTicket }),
-    [tickets, inventory, simulateTicket, resetMockData, getTicket],
+    () => ({ tickets, inventory, simulateTicket, submitCustomerTicket, resetMockData, getTicket }),
+    [tickets, inventory, simulateTicket, submitCustomerTicket, resetMockData, getTicket],
   );
 
   return <SwapDeskContext.Provider value={value}>{children}</SwapDeskContext.Provider>;
