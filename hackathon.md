@@ -21,6 +21,16 @@ Contact details shared in chat are withheld from this public log.
 
 ## Build log
 
+### 2026-10-10 07:09 +01:00 - Slice 1 commits re-attached to Entire checkpoints
+
+Completed:
+
+- `4c298c3` (Slice 1) and `5beae0c` (README) had no Entire checkpoint (`checkpoint explain` → "not created during an Entire session"). Per explicit user instruction, soft-reset to `62b1da7` and recommitted byte-identical trees as `ed0eb54` and `dfac87e` through this captured session (`git diff 5beae0c --stat` empty after; build plan left untracked; nothing pushed).
+- New checkpoints: `01M4J6SB1Z196SK1RN9JCC7E8R` → `ed0eb54` (session `ses_edbbdf…`, author, transcript captured); `01M4J6T16TESM6A3GTWW982RJ9` → `dfac87e`. Old SHAs remain recoverable via reflog/Entire refs.
+- Tests: `uv run pytest -q` → 8 passed after the recommit.
+
+Failures: none in the recommit; prior gap (commits made outside a captured session) now closed.
+
 ### 2026-10-10 06:54 +01:00 - Slice 1: reservation foundation done
 
 Completed:
