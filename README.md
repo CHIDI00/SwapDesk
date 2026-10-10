@@ -71,6 +71,38 @@ print(get_operation_status('scratch.db', 'OP-DEMO'))
 
 Delete `scratch.db` when done. It is git-ignored.
 
+## Studio verification
+
+Two graphs share one architecture (`prepare` → nested `agent` subgraph → `verify`), defined in `src/swapdesk/agent/studio_flow.py` and served from `langgraph.json`:
+
+```bash
+uv run langgraph dev
+```
+
+Open Studio at `https://smith.langchain.com/studio/?baseUrl=http://127.0.0.1:8123` (override the port with `--port`). You will see two assistants:
+
+- **`swapdesk_offline` (default).** A scripted model replays tool calls against the real backend. Zero model requests. This proves the wiring, never Gemini's decisions; the evidence panel labels every offline run accordingly.
+- **`swapdesk_live` (opt-in).** Budget-capped Gemini. Each run needs an explicit request budget plus `SWAPDESK_MODEL` and `GEMINI_API_KEY`; anything missing fails loudly before any model call. Nothing live runs until you explicitly invoke a budgeted smoke test.
+
+Example inputs (offline):
+
+```json
+{"scenario": "arrange"}
+{"scenario": "deny", "case_id": "DEMO-DENY-2"}
+{"scenario": "recover", "case_id": "DEMO-REC-2"}
+{"case_id": "DEMO-ARRANGE", "resume": true, "message": "status check"}
+```
+
+Example input (live, budgeted):
+
+```json
+{"message": "Exchange ITEM-01 on order ORD-1001 for size 42.", "budget": 8}
+```
+
+What to inspect: expand the `agent` subgraph to see every model turn, tool call, and tool result as separate trace steps. Individual tools share one `tools` node because that is how the prebuilt agent compiles a tool list; nothing is hidden, each call still lands as its own `ToolMessage`. The `verify` node shows the outcome derived from persisted state, the database evidence (exchanges, operations, case state), and the rendered customer reply.
+
+Rules the graphs enforce: one isolated database per case under `studio_data/` (git-ignored); reusing a case id without `"resume": true` errors instead of resetting; resume preserves the case, operation keys, and thread state. The request cap counts every model request including retries and refuses past the budget; the recursion limit alone is not a request budget. Demo scenarios use fresh `DEMO-*` cases only and never load the frozen benchmark, so holdouts stay out of demo tuning. Opening Studio, importing the graphs, and running offline tests make zero model requests.
+
 ## Configuration
 
 - Return window and eligibility live in `src/swapdesk/policy.py` (`RETURN_WINDOW_DAYS = 30`).

@@ -1,7 +1,8 @@
 {
   "dependencies": ["."],
   "graphs": {
-    "swapdesk_agent": "./src/swapdesk/agent/studio.py:graph"
+    "swapdesk_offline": "./src/swapdesk/agent/studio.py:offline_graph",
+    "swapdesk_live": "./src/swapdesk/agent/studio.py:live_graph"
   },
   "env_file": ".env"
 }

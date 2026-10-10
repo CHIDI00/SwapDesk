@@ -10,20 +10,17 @@ import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from langchain_core.language_models.chat_models import BaseChatModel
 from langchain_core.messages import AIMessage
-from langchain_core.outputs import ChatGeneration, ChatResult
-from pydantic import PrivateAttr
 
 from swapdesk import faults
 from swapdesk.agent.graph import (
     AgentContext,
-    ConfigurationError,
     build_model,
     derive_outcome,
     run_agent,
     sqlite_checkpointer,
 )
+from swapdesk.agent.scripted import ScriptedChatModel, call as _call
 from swapdesk.db import connect, init_db
 from swapdesk.fixtures import load_fixtures
 from swapdesk import telemetry
@@ -46,35 +43,6 @@ def shop(tmp_path):
     load_fixtures(conn)
     conn.close()
     return db_path
-
-
-class ScriptedChatModel(BaseChatModel):
-    """Test double: replays canned messages, binds tools as passthrough."""
-
-    _msgs: object = PrivateAttr()
-
-    def __init__(self, messages):
-        super().__init__()
-        self._msgs = iter(messages)
-
-    def _generate(self, messages, stop=None, run_manager=None, **kwargs):
-        try:
-            msg = next(self._msgs)
-        except StopIteration:
-            msg = AIMessage(content="out of script; stopping.")
-        return ChatResult(generations=[ChatGeneration(message=msg)])
-
-    @property
-    def _llm_type(self) -> str:
-        return "scripted"
-
-    def bind_tools(self, tools, **kwargs):
-        return self
-
-
-def _call(name, args, cid="c1"):
-    return AIMessage(content="", tool_calls=[
-        {"name": name, "args": args, "id": cid, "type": "tool_call"}])
 
 
 def _ctx(db_path, case="AG-1", run="RUN-AG1", message="", consent=None):

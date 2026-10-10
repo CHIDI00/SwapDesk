@@ -1,42 +1,33 @@
-"""LangGraph Studio entrypoint. Visualization only, not a live run.
+"""LangGraph Studio entrypoints. Two clearly labeled modes.
 
-The compiled graph below has the exact production wiring (same tools,
-same prompts, same bounded loop). The model is a local stand-in because
-this machine has no live model route. Invoking it here returns canned
-model text and never calls tools, never a real decision. Live runs use
-run_agent() with a Gemini model.
+- offline_graph (default): scripted model replays tool calls against the
+  real backend. Zero model requests. Wiring verification only, never
+  proof of Gemini's decisions.
+- live_graph (opt-in): budget-capped Gemini. Needs an explicit per-run
+  budget plus SWAPDESK_MODEL and GEMINI_API_KEY; anything missing fails
+  loudly before any model call. No live calls happen unless a budgeted
+  smoke test is explicitly invoked.
 """
 
 from __future__ import annotations
 
-from langchain_core.language_models.chat_models import BaseChatModel
-from langchain_core.messages import AIMessage
-from langchain_core.outputs import ChatGeneration, ChatResult
+import os
+import sqlite3
+from pathlib import Path
 
-from swapdesk.agent.graph import AgentContext, build_agent
+from langgraph.checkpoint.sqlite import SqliteSaver
 
-STUDIO_DB_PATH = "studio.db"
-
-
-class StudioStandIn(BaseChatModel):
-    """Canned model so Studio can execute the real graph offline."""
-
-    @property
-    def _llm_type(self) -> str:
-        return "studio-stand-in"
-
-    def _generate(self, messages, stop=None, run_manager=None, **kwargs):
-        return ChatResult(generations=[ChatGeneration(message=AIMessage(
-            content="Studio stand-in: configure SWAPDESK_MODEL plus "
-                    "GEMINI_API_KEY and run run_agent() for a live case."))])
-
-    def bind_tools(self, tools, **kwargs):
-        return self
-
-
-graph = build_agent(
-    AgentContext(db_path=STUDIO_DB_PATH, case_id="STUDIO",
-                 run_id="STUDIO-1",
-                 message="Studio visualization stand-in"),
-    model=StudioStandIn(),
+from swapdesk.agent.studio_flow import (
+    STUDIO_ROOT,
+    build_live_graph,
+    build_offline_graph,
 )
+
+# Env-aware so tests stay out of the repo tree; the server uses the default.
+_threads_db = Path(os.environ.get("SWAPDESK_STUDIO_ROOT", STUDIO_ROOT)) / "studio_threads.db"
+_threads_db.parent.mkdir(parents=True, exist_ok=True)
+_saver_conn = sqlite3.connect(str(_threads_db), check_same_thread=False)
+_saver = SqliteSaver(_saver_conn)
+
+offline_graph = build_offline_graph(checkpointer=_saver)
+live_graph = build_live_graph(checkpointer=_saver)

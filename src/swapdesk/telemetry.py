@@ -68,9 +68,10 @@ def maybe_wrap_gemini(client):
     """Wrap a real Gemini chat client for LLM-span capture; passthrough."""
     try:
         from langchain_google_genai import ChatGoogleGenerativeAI
+        is_gemini = isinstance(client, ChatGoogleGenerativeAI)
     except Exception:
         return client
-    if isinstance(client, ChatGoogleGenerativeAI):
+    if is_gemini:
         return neatlogs.wrap(client, surface="swapdesk-agent")
     return client
 
