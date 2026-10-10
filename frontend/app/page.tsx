@@ -129,6 +129,7 @@ export default function MissionControlPage() {
                 onChange={(event) => setFilter(event.target.value as "all" | TicketStatus)}
               >
                 <option value="all">All</option>
+                <option value="processing">Agent Processing</option>
                 <option value="resolved">Resolved</option>
                 <option value="escalated">Escalated</option>
               </select>
@@ -139,6 +140,7 @@ export default function MissionControlPage() {
           <div className="space-y-3">
             {visibleTickets.map((ticket, index) => {
               const escalated = ticket.status === "escalated";
+              const processing = ticket.status === "processing";
               return (
                 <Link
                   key={ticket.id}
@@ -149,11 +151,11 @@ export default function MissionControlPage() {
                     className="panel relative overflow-hidden p-4 transition duration-200 ease-out group-hover:-translate-y-0.5 group-hover:border-success/25 group-hover:shadow-[0_14px_45px_-28px_rgba(91,255,159,0.22)] sm:p-5"
                     style={{ animationDelay: `${index * 70}ms` }}
                   >
-                    <div className={`absolute inset-y-0 left-0 w-[2px] ${escalated ? "bg-warning/70" : "bg-success/50"}`} />
+                    <div className={`absolute inset-y-0 left-0 w-[2px] ${escalated ? "bg-warning/70" : processing ? "bg-primary/60" : "bg-success/50"}`} />
                     <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
                       <div className="flex min-w-0 flex-1 items-start gap-4">
-                        <span className={`mt-0.5 grid h-10 w-10 shrink-0 place-items-center rounded-xl border ${escalated ? "border-warning/15 bg-warning/[0.06] text-warning" : "border-success/15 bg-success/[0.06] text-success"}`}>
-                          {escalated ? <ShieldAlert className="h-[18px] w-[18px]" /> : <PackageCheck className="h-[18px] w-[18px]" />}
+                        <span className={`mt-0.5 grid h-10 w-10 shrink-0 place-items-center rounded-xl border ${escalated ? "border-warning/15 bg-warning/[0.06] text-warning" : processing ? "border-primary/15 bg-primary/[0.06] text-primary" : "border-success/15 bg-success/[0.06] text-success"}`}>
+                          {escalated ? <ShieldAlert className="h-[18px] w-[18px]" /> : processing ? <Clock3 className="h-[18px] w-[18px]" /> : <PackageCheck className="h-[18px] w-[18px]" />}
                         </span>
                         <div className="min-w-0 flex-1">
                           <div className="mb-1.5 flex flex-wrap items-center gap-x-2.5 gap-y-1">
@@ -176,8 +178,8 @@ export default function MissionControlPage() {
                         </div>
                       </div>
                       <div className="flex items-center justify-between gap-3 pl-14 sm:justify-end sm:pl-0">
-                        <span className={`inline-flex items-center gap-2 rounded-full border px-2.5 py-1.5 text-[10px] font-medium ${escalated ? "border-warning/20 bg-warning/[0.06] text-warning" : "border-success/20 bg-success/[0.06] text-success"}`}>
-                          <span className={`h-1.5 w-1.5 rounded-full ${escalated ? "bg-warning" : "bg-success"}`} />
+                        <span className={`inline-flex items-center gap-2 rounded-full border px-2.5 py-1.5 text-[10px] font-medium ${escalated ? "border-warning/20 bg-warning/[0.06] text-warning" : processing ? "border-primary/20 bg-primary/[0.06] text-primary" : "border-success/20 bg-success/[0.06] text-success"}`}>
+                          <span className={`h-1.5 w-1.5 rounded-full ${escalated ? "bg-warning" : processing ? "bg-primary pulse-dot" : "bg-success"}`} />
                           {ticket.statusLabel}
                         </span>
                         <ArrowUpRight className="h-4 w-4 shrink-0 text-muted-foreground/40 transition group-hover:translate-x-0.5 group-hover:-translate-y-0.5 group-hover:text-foreground/80" />

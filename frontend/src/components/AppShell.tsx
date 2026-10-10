@@ -4,7 +4,6 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { Inbox, Activity, Boxes, Database, Settings, Ticket, ChevronRight, Zap } from "lucide-react";
 import type { ReactNode } from "react";
-import { useSwapDesk } from "@/store/swapdesk";
 
 const nav = [
   { to: "/", label: "Inbox", icon: Inbox },
@@ -17,13 +16,11 @@ const nav = [
 export function AppShell({ crumbs, children, metrics = true }: { crumbs: { label: string; to?: string }[]; children: ReactNode; metrics?: boolean }) {
   const pathname = usePathname();
   const router = useRouter();
-  const { simulateTicket } = useSwapDesk();
 
   const isActive = (to: string) => pathname === to;
 
   const handleSimulateTicket = () => {
-    simulateTicket();
-    router.push("/");
+    router.push("/simulate");
   };
 
   return (
