@@ -1,0 +1,1 @@
+Test frontend capture
