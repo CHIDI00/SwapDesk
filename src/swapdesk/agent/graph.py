@@ -255,6 +255,7 @@ def run_agent(ctx: AgentContext, model=None, checkpointer=None,
                     "exchange_id": decided["exchange_id"],
                     "reply": reply,
                     "messages": result["messages"],
+                    "data": decided["data"],
                     "exporting": telemetry.is_exporting()}
     finally:
         telemetry.flush()
