@@ -21,6 +21,23 @@ Contact details shared in chat are withheld from this public log.
 
 ## Build log
 
+### 2026-10-10 21:45 +01:00 - cfo.ai draft business-plan deliverable complete
+
+Completed:
+
+- Added supplier-built cfo.ai outputs byte-identical to `docs/business/`: [SwapDesk-Business-Plan.md](docs/business/SwapDesk-Business-Plan.md), [SwapDesk-Business-Plan.pdf](docs/business/SwapDesk-Business-Plan.pdf), [SwapDesk-Financial-Model.xlsx](docs/business/SwapDesk-Financial-Model.xlsx). No numbers regenerated or changed.
+- Model covers Base (Main-Scenario), Growth, and Bad Reliability scenarios over October 2026–September 2028. Pricing ($49/store/month incl. 100 verified arrangements; $0.50 per extra), growth, support time, and $15,000 opening cash are assumptions, not observed facts. Hackathon credits excluded from recurring economics.
+- Reviewed all three files for sensitive content: no emails, phone numbers, API keys, or credentials found (byte scan of PDF/XLSX, full read of MD). Headline figures in the workbook match the MD summary.
+- No claim made of profitability, validated demand, or production reliability: Main-Scenario ends at ($588) operating profit, demand/pricing unvalidated per the plan itself, and live benchmark/model-decision gaps remain open (see runner/harness evidence entry).
+
+Gaps (explicitly pending):
+
+- cfo.ai account/card step, business-plan submission file packaging, video, X post.
+
+Tests run: none (documentation packaging only).
+
+Failures: none.
+
 ### 2026-10-10 20:50 +01:00 - Runner/harness evidence saved for submission
 
 Completed:
