@@ -2,7 +2,7 @@
 
 SwapDesk arranges shoe exchanges for a fictional shop. A customer asks for a different size, and the backend checks policy and stock, holds a replacement, creates a return and a mock label, then verifies the saved state. Every request ends in one of four outcomes: exchange arranged, clarification required, policy denial, or human escalation. All data is synthetic. There are no payments, shipments, or real customers.
 
-This repo holds the backend. It is a neatHack project, currently at Slice 3 of 7 (independent checker and frozen benchmark). The HTTP API, agent loop, and demo do not exist yet.
+This repo holds the backend. It is a neatHack project, currently at Slice 4 of 7 (neatlogs and LangGraph agent). The HTTP API and demo do not exist yet.
 
 ## Features
 
@@ -17,8 +17,10 @@ Implemented:
 - Controlled failure injection (demo-only `faults` module) with same-key recovery
 - Deterministic pytest suite (34 tests, no network, no model)
 - Independent checker plus frozen 30-case benchmark (`eval/cases_v1.json`, 8 holdouts, 42 runs)
+- One LangGraph tool-using agent (`langchain.agents.create_agent`, Gemini): curated tools, bounded loop, file-backed checkpoints, DB-derived outcomes, template replies
+- neatlogs wiring (workflow/tool spans, flush): local capture without a key, export with one
 
-Planned, not built: LangGraph agent with neatlogs tracing, FastAPI routes, business model in cfo.ai.
+Planned, not built: FastAPI routes, business model in cfo.ai.
 
 ## Installation
 
@@ -73,6 +75,9 @@ Delete `scratch.db` when done. It is git-ignored.
 
 - Return window and eligibility live in `src/swapdesk/policy.py` (`RETURN_WINDOW_DAYS = 30`).
 - Each call takes a database path, so tests and scratch work never touch real files. There is no server config yet.
+- Agent and telemetry read `.env` (git-ignored, never committed): `GEMINI_API_KEY`, `NEATLOGS_API_KEY` (both optional; without them the agent needs a passed-in model and telemetry stays local-only).
+- The live model id comes from `SWAPDESK_MODEL` (required for live runs; no default is guessed).
+- Live model and telemetry export need working egress to Google APIs; where the network blocks them, the deterministic suites still pass.
 
 ## Project structure
 
@@ -85,6 +90,11 @@ src/swapdesk/
   operations.py  reserve/return/label/finalize/release/cancel/escalate/verify
   faults.py      Demo-only failure injection (tests, never production)
   checker.py     Deterministic benchmark checker (no LLM judge)
+  telemetry.py   neatlogs init/wrap/flush (local-only without a key)
+  agent/
+    tools.py     Curated LangChain tools bound to one case run
+    prompts.py   System prompt and verified reply templates
+    graph.py     create_agent wiring, bounded runs, DB-derived outcomes
 eval/
   cases_v1.json  Frozen 30-case benchmark (8 holdouts, seeded faults)
   driver.py      Deterministic reference driver (not the agent)

@@ -21,6 +21,31 @@ Contact details shared in chat are withheld from this public log.
 
 ## Build log
 
+### 2026-10-10 08:32 +01:00 - Slice 4: neatlogs and LangGraph agent done
+
+Completed:
+
+- Provider is Gemini (user-confirmed; `.env` carries `GEMINI_API_KEY` + `NEATLOGS_API_KEY`, names only, values never touched). Dropped the unused `langchain-anthropic`.
+- Deps via uv: `langchain` 1.4.4 (new `create_agent`, not deprecated `create_react_agent`), `langgraph` 1.2.14, `langchain-google-genai`, `langgraph-checkpoint-sqlite` 3.1.1, `neatlogs` 1.4.26. `uv.lock` committed.
+- New modules (business logic untouched): `telemetry.py` (dotenv loader, once-only init, local-only without key, Gemini wrap), `agent/tools.py` (14 curated tools, structural key discipline, JSON errors with retry flags), `agent/prompts.py` (system prompt + DB-rendered reply templates), `agent/graph.py` (`create_agent` wiring, recursion-bounded runs, file checkpointer separate from business data, DB-derived outcomes).
+- Agent rules hold: one loop chooses tools from results; resume reuses keys; op-status query after uncertain writes; untrusted input; no silent substitution; reply from verified state (fake tracking in model text provably excluded).
+- Tests: `uv run pytest -q` → 46 passed (12 new agent tests, scripted model, zero API spend). Five honest failures fixed same session (moved `BaseChatModel` import, iterator-only fake model, missing sqlite row factory, duplicate tool-call ids, sqlite thread guard).
+- `neatlogs doctor --local` passes. Export path implemented but unproven from here.
+
+Gaps (explicit, blocking nothing deterministic):
+
+- Live Gemini unreachable from this machine (TLS EOF to Google APIs; Anthropic endpoint also TCP-dead). No live model listing, no live smoke run. `SWAPDESK_MODEL` is required with no guessed default.
+- neatlogs export/dashboard unverified: key exists in `.env`, but egress fails here. Needs a networked run plus user dashboard confirmation.
+- Agent baseline on frozen cases is Slice 6 work; holdouts stay excluded from tuning.
+
+Planned:
+
+- Slice 5: FastAPI routes for frontend teammates.
+
+Tests run: `uv run pytest -q` (46 passed); `neatlogs doctor --local` (pass).
+
+Failures: five development failures above, all fixed same session.
+
 ### 2026-10-10 08:03 +01:00 - Slice 3: independent checker and frozen benchmark done
 
 Completed:
