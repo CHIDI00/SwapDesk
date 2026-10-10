@@ -15,42 +15,7 @@ import {
   Tag,
 } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
-
-type TicketStatus = "resolved" | "escalated";
-
-const tickets: {
-  id: string;
-  message: string;
-  status: TicketStatus;
-  statusLabel: string;
-  actions: string[];
-  time: string;
-}[] = [
-  {
-    id: "TCK-9042",
-    message: "Jordan 4s are too tight, need size 43.",
-    status: "resolved",
-    statusLabel: "Resolved Autonomously",
-    actions: ["RESERVE_STOCK", "CREATE_LABEL"],
-    time: "Just now",
-  },
-  {
-    id: "TCK-9043",
-    message: "I want a refund but I bought these 90 days ago.",
-    status: "escalated",
-    statusLabel: "Escalated to Human",
-    actions: ["POLICY_DENY"],
-    time: "2 min ago",
-  },
-  {
-    id: "TCK-9044",
-    message: "Need a size 10 exchange.",
-    status: "resolved",
-    statusLabel: "Resolved (Recovered)",
-    actions: ["API_TIMEOUT_RECOVERED"],
-    time: "5 min ago",
-  },
-];
+import { useSwapDesk, type TicketStatus } from "@/store/swapdesk";
 
 const metrics = [
   {
@@ -88,6 +53,7 @@ const metrics = [
 ] as const;
 
 export default function MissionControlPage() {
+  const { tickets } = useSwapDesk();
   const [filter, setFilter] = useState<"all" | TicketStatus>("all");
   const visibleTickets = tickets.filter((ticket) => filter === "all" || ticket.status === filter);
 
@@ -176,7 +142,7 @@ export default function MissionControlPage() {
               return (
                 <Link
                   key={ticket.id}
-                  href="/inbox"
+                  href={`/ticket/${ticket.id}`}
                   className="group block rounded-2xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-success/50"
                 >
                   <article

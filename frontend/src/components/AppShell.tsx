@@ -1,9 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
-import { Inbox, Activity, Boxes, Database, Settings, Ticket, ChevronRight } from "lucide-react";
+import { usePathname, useRouter } from "next/navigation";
+import { Inbox, Activity, Boxes, Database, Settings, Ticket, ChevronRight, Zap } from "lucide-react";
 import type { ReactNode } from "react";
+import { useSwapDesk } from "@/store/swapdesk";
 
 const nav = [
   { to: "/", label: "Inbox", icon: Inbox },
@@ -15,8 +16,15 @@ const nav = [
 
 export function AppShell({ crumbs, children, metrics = true }: { crumbs: { label: string; to?: string }[]; children: ReactNode; metrics?: boolean }) {
   const pathname = usePathname();
+  const router = useRouter();
+  const { simulateTicket } = useSwapDesk();
 
   const isActive = (to: string) => pathname === to;
+
+  const handleSimulateTicket = () => {
+    simulateTicket();
+    router.push("/");
+  };
 
   return (
     <div className="flex min-h-screen w-full">
@@ -65,12 +73,23 @@ export function AppShell({ crumbs, children, metrics = true }: { crumbs: { label
                 </span>
               ))}
             </nav>
-            {metrics && (
-              <div className="grid grid-cols-2 gap-2 sm:flex sm:gap-3">
-                <Metric label="Completion Rate" value="96%" tone="success" />
-                <Metric label="Cost per Case" value="$0.24" />
-              </div>
-            )}
+            <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+              <button
+                type="button"
+                onClick={handleSimulateTicket}
+                className="inline-flex shrink-0 items-center gap-2 rounded-lg border border-hairline bg-card/60 px-3 py-2 text-xs font-medium text-foreground transition-colors hover:bg-accent/60"
+                title="Inject a mock ticket into the queue"
+              >
+                <Zap className="h-3.5 w-3.5 text-success" />
+                Simulate Ticket
+              </button>
+              {metrics && (
+                <div className="grid grid-cols-2 gap-2 sm:flex sm:gap-3">
+                  <Metric label="Completion Rate" value="96%" tone="success" />
+                  <Metric label="Cost per Case" value="$0.24" />
+                </div>
+              )}
+            </div>
           </div>
         </header>
         <main className="mx-auto min-w-0 w-full max-w-[1600px] flex-1 px-4 py-6 sm:px-6 lg:px-8">{children}</main>
