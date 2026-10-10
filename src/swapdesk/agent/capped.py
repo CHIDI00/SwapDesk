@@ -1,55 +1,73 @@
-"""Hard model-request budget for live runs.
+"""Gemini generation-attempt cap, including streaming and async entrypoints.
 
-The graph recursion limit bounds loop STEPS, not API requests: retries,
-re-reads, and multi-call turns all slip past it. This wrapper counts
-every generation request (retries included, since they re-enter
-_generate) and refuses past the cap. The refusal is loud by design:
-a capped run fails explicitly, never as a fake success.
+SDK retries are forced to one attempt. Each allowed generation can therefore
+make at most one model request. Refusals and failed attempts also consume budget.
+No keys or client details are exposed by this wrapper.
 """
-
 from __future__ import annotations
 
+from threading import Lock
 from pydantic import PrivateAttr
+from google.genai.types import HttpOptions, HttpRetryOptions
+from langchain_google_genai import ChatGoogleGenerativeAI
 
 
 class BudgetExceeded(Exception):
-    """The live model-request budget is spent. No further calls made."""
+    """No more generation attempts are authorized."""
 
 
-class BudgetedGemini:
-    """Factory namespace; the capped model class is BudgetedChatModel."""
+class BudgetedChatModel(ChatGoogleGenerativeAI):
+    _budget: int = PrivateAttr(default=0)
+    _spent: int = PrivateAttr(default=0)
+    _budget_lock: Lock = PrivateAttr(default_factory=Lock)
 
+    def set_budget(self, n: int) -> "BudgetedChatModel":
+        if type(n) is not int or n < 0:
+            raise ValueError("budget must be a nonnegative integer")
+        with self._budget_lock:
+            self._budget = n
+        return self
 
-try:
-    from langchain_google_genai import ChatGoogleGenerativeAI as _GeminiBase
-except Exception:  # pragma: no cover - import-time fallback
-    _GeminiBase = None  # type: ignore
+    @property
+    def spent(self) -> int:
+        return self._spent
 
-
-if _GeminiBase is not None:
-    class BudgetedChatModel(_GeminiBase):  # type: ignore[valid-type]
-        """ChatGoogleGenerativeAI with a hard request budget."""
-
-        _budget: int = PrivateAttr(default=0)
-        _spent: int = PrivateAttr(default=0)
-
-        def set_budget(self, n: int) -> "BudgetedChatModel":
-            self._budget = int(n)
-            return self
-
-        @property
-        def spent(self) -> int:
-            return self._spent
-
-        def _generate(self, messages, stop=None, run_manager=None, **kwargs):
+    def _claim(self):
+        with self._budget_lock:
             if self._spent >= self._budget:
                 raise BudgetExceeded(
-                    f"model budget exhausted ({self._spent}/"
-                    f"{self._budget} requests); refusing the call")
+                    f"model budget exhausted ({self._spent}/{self._budget} attempts)")
             self._spent += 1
-            return super()._generate(messages, stop=stop,
-                                     run_manager=run_manager, **kwargs)
-else:  # pragma: no cover - import-time fallback
-    class BudgetedChatModel:  # type: ignore[no-redef]
-        def __init__(self, *args, **kwargs):
-            raise ImportError("langchain-google-genai is not installed")
+
+    def _prepare_request(self, *args, **kwargs):
+        # Both model-level and call-level settings must be constrained. The SDK
+        # merges per-call HttpOptions after max_retries, so enforce BOTH.
+        kwargs["max_retries"] = 1
+        supplied = kwargs.get("http_options")
+        if isinstance(supplied, HttpOptions):
+            supplied = supplied.model_dump(exclude_none=True)
+        options = dict(supplied or {})
+        options["retry_options"] = HttpRetryOptions(attempts=1)
+        kwargs["http_options"] = HttpOptions(**options)
+        return super()._prepare_request(*args, **kwargs)
+
+    def _generate(self, messages, stop=None, run_manager=None, **kwargs):
+        self._claim()
+        return super()._generate(messages, stop=stop,
+                                 run_manager=run_manager, **kwargs)
+
+    async def _agenerate(self, messages, stop=None, run_manager=None, **kwargs):
+        self._claim()
+        return await super()._agenerate(messages, stop=stop,
+                                       run_manager=run_manager, **kwargs)
+
+    def _stream(self, messages, stop=None, run_manager=None, **kwargs):
+        self._claim()
+        yield from super()._stream(messages, stop=stop,
+                                   run_manager=run_manager, **kwargs)
+
+    async def _astream(self, messages, stop=None, run_manager=None, **kwargs):
+        self._claim()
+        async for chunk in super()._astream(messages, stop=stop,
+                                           run_manager=run_manager, **kwargs):
+            yield chunk
