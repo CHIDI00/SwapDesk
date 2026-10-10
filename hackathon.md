@@ -21,6 +21,25 @@ Contact details shared in chat are withheld from this public log.
 
 ## Build log
 
+### 2026-10-10 06:54 +01:00 - Slice 1: reservation foundation done
+
+Completed:
+
+- `uv init --lib` plus `uv add --dev pytest`. Stack is stdlib SQLite plus pytest; FastAPI, LangGraph, and neatlogs stay out until their slices.
+- New code in `src/swapdesk/`: `db` (schema, WAL, IMMEDIATE transactions), `models` (typed records), `policy` (30-day delivered window, final sale excluded), `fixtures` (synthetic shoe shop, 5 orders, 7 items), `operations` (`reserve_replacement`, `get_operation_status`, read helpers).
+- One transaction commits the stock hold, exchange row, idempotency record, and journal event together. Same key plus same payload returns the saved result; same key plus different payload raises. A second key for an item with an active exchange reuses it as a duplicate with no new stock effect. Exact requested size only, no substitution.
+- `.gitignore` now ignores local runtime databases (`*.db`, `*.sqlite`, `*.sqlite3`).
+- Tests: `uv run pytest -q` gives 8 passed, repeated 3 times (24/24). Proofs cover eligible success, same-key idempotency, payload mismatch rejection, ineligible and insufficient-stock runs leaving inventory and tables untouched, distinct cases sharing one exchange, 5-thread oversell test on 2 units, and nonnegative inventory with journal linkage.
+- First concurrency draft failed honestly (8th test): one item allows only one active exchange, so 2 units could not be taken twice. Fixed the test by adding a second item on the same SKU/size pool, not by weakening the rule.
+
+Planned:
+
+- Slice 2: return creation, label creation, reservation release, workflow progress and state transitions, failure injection and recovery.
+
+Tests run: `uv run pytest -q` (3 runs, 8 passed each).
+
+Failures: one test design failure during development (see above), fixed same session.
+
 ### 2026-10-10 06:48 +01:00 - Milestone 1: Entire session capture verified end-to-end (prior session)
 
 - Goal: verify Entire agent capture works before feature development.
