@@ -21,6 +21,25 @@ Contact details shared in chat are withheld from this public log.
 
 ## Build log
 
+### 2026-10-10 08:03 +01:00 - Slice 3: independent checker and frozen benchmark done
+
+Completed:
+
+- `src/swapdesk/checker.py`: deterministic checks, no LLM judge. Per-outcome rules (arranged exactly-one-effect + truthful handoff + exact stock consumption; denied/clarification zero-writes + reason/question match; escalated partial-state accuracy + cleanup done/pending/none) plus global invariants (reference data frozen, nonnegative inventory, hold reconciliation, journal linkage, only the case's pools move) and run-log truthfulness.
+- `eval/cases_v1.json`: 30 frozen cases (`benchmark-v1`), seeded fault schedules, 8 holdouts (A3, A7, A11, S1, D2, C3, C5, E1), 6 cases repeated 3 times (42 runs total: 15 arranged, 4 denied, 5 clarification, 6 escalated). Expected answers live only here; the future agent never sees this file.
+- `eval/driver.py`: deterministic reference policy (fixed templates, bounded same-key retries, abandonment/escalation paths, rerun/cross-case/cancel-fresh/cross-run scripts). Not the agent.
+- `eval/harness.py` + `eval/run.py`: isolated DB per run, committed evidence `eval/results/v1.json` (42/42 passed).
+- Reserve records `requested_size` separately from authorized `size` (consent cases); fixture adds shipped `ITEM-08`/`ORD-1006`. README slice pointer/structure refreshed; snippets re-verified verbatim.
+- Tests: `uv run pytest -q` → 34 passed (8 + 13 + 11 checker mutations + 2 freeze). Three honest failures fixed same session: invariant read `sku_hint` instead of `sku`; checker never parsed `progress_json` (consent notes invisible); driver lumped mismatch with unknown-item and lost the original requested size.
+
+Planned:
+
+- Slice 4: neatlogs + LangGraph agent against these frozen cases (holdouts excluded from prompt tuning).
+
+Tests run: `uv run pytest -q` (34 passed); `uv run python eval/run.py` (42/42).
+
+Failures: three development failures above, all fixed same session.
+
 ### 2026-10-10 07:37 +01:00 - Slice 2: complete mock exchange done
 
 Completed:

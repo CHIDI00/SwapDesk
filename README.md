@@ -2,7 +2,7 @@
 
 SwapDesk arranges shoe exchanges for a fictional shop. A customer asks for a different size, and the backend checks policy and stock, holds a replacement, creates a return and a mock label, then verifies the saved state. Every request ends in one of four outcomes: exchange arranged, clarification required, policy denial, or human escalation. All data is synthetic. There are no payments, shipments, or real customers.
 
-This repo holds the backend. It is a neatHack project, currently at Slice 1 of 7 (reservation foundation). The HTTP API, agent loop, and demo do not exist yet.
+This repo holds the backend. It is a neatHack project, currently at Slice 3 of 7 (independent checker and frozen benchmark). The HTTP API, agent loop, and demo do not exist yet.
 
 ## Features
 
@@ -13,9 +13,12 @@ Implemented:
 - Policy enforcement in the backend: delivered status, 30-day window, final sale excluded
 - One active exchange per order item, across cases
 - Append-only action journal for every committed or duplicate-routed operation
-- Deterministic pytest suite (8 tests, no network, no model)
+- Full mock exchange: return and label creation, hold release, cancel, escalation, case progress, read-only recovery handoff
+- Controlled failure injection (demo-only `faults` module) with same-key recovery
+- Deterministic pytest suite (34 tests, no network, no model)
+- Independent checker plus frozen 30-case benchmark (`eval/cases_v1.json`, 8 holdouts, 42 runs)
 
-Planned, not built: return and label creation, LangGraph agent with neatlogs tracing, FastAPI routes, frozen benchmark, business model in cfo.ai.
+Planned, not built: LangGraph agent with neatlogs tracing, FastAPI routes, business model in cfo.ai.
 
 ## Installation
 
@@ -76,12 +79,22 @@ Delete `scratch.db` when done. It is git-ignored.
 ```text
 src/swapdesk/
   db.py          SQLite schema and transactions
-  models.py      Typed records
+  models.py      Typed records, states, transitions
   policy.py      Eligibility rules
   fixtures.py    Synthetic shop data
-  operations.py  reserve_replacement, get_operation_status, reads
+  operations.py  reserve/return/label/finalize/release/cancel/escalate/verify
+  faults.py      Demo-only failure injection (tests, never production)
+  checker.py     Deterministic benchmark checker (no LLM judge)
+eval/
+  cases_v1.json  Frozen 30-case benchmark (8 holdouts, seeded faults)
+  driver.py      Deterministic reference driver (not the agent)
+  harness.py     Isolated per-run execution and checking
+  run.py         Regenerates eval/results/v1.json
 tests/
   test_reservation.py
+  test_exchange.py
+  test_checker.py
+  test_freeze.py
 ```
 
 Build progress lives in [hackathon.md](hackathon.md). The full plan is in [SwapDesk neatHack Build Plan.md](SwapDesk%20neatHack%20Build%20Plan.md) (spec, not evidence).

@@ -283,8 +283,13 @@ def _transition(conn: sqlite3.Connection, *, exchange_id: str, to_status: str,
 
 def reserve_replacement(db_path: str | Path, *, case_id: str, run_id: str,
                         op_key: str, order_id: str, order_item_id: str,
-                        size: str, qty: int = 1) -> ReservationResult:
+                        size: str, qty: int = 1,
+                        requested_size: str | None = None) -> ReservationResult:
     """Reserve one replacement unit of the exact requested size.
+
+    `size` is the authorized size (never substituted silently);
+    `requested_size` records what the customer originally asked for and
+    defaults to `size`. Both join the idempotency payload.
 
     Idempotent on op_key: same key plus same payload returns the saved
     result; same key plus different payload raises PayloadMismatchError.
@@ -294,8 +299,10 @@ def reserve_replacement(db_path: str | Path, *, case_id: str, run_id: str,
     """
     if qty < 1:
         raise ReservationError("qty must be at least 1")
+    if requested_size is None:
+        requested_size = size
     payload = {"order_id": order_id, "order_item_id": order_item_id,
-               "size": size, "qty": qty}
+               "size": size, "qty": qty, "requested_size": requested_size}
     digest = payload_hash(payload)
     conn = _db.connect(db_path)
     try:
@@ -379,8 +386,8 @@ def reserve_replacement(db_path: str | Path, *, case_id: str, run_id: str,
                    (id, case_id, order_id, order_item_id, requested_size,
                     authorized_size, qty, status, created_at, updated_at)
                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
-                (exchange_id, case_id, order_id, order_item_id, size,
-                 size, qty, "replacement_reserved", now, now),
+                (exchange_id, case_id, order_id, order_item_id,
+                 requested_size, size, qty, "replacement_reserved", now, now),
             )
             conn.execute(
                 "UPDATE stock SET held = held + ? WHERE sku = ? AND size = ?",
@@ -400,7 +407,8 @@ def reserve_replacement(db_path: str | Path, *, case_id: str, run_id: str,
             _journal(conn, op_key, "reserved",
                      {"exchange_id": exchange_id,
                       "order_item_id": order_item_id,
-                      "sku": item.sku, "size": size, "qty": qty})
+                      "sku": item.sku, "size": size, "qty": qty,
+                      "requested_size": requested_size})
             _touch_case(conn, case_id, "replacement_reserved", step="reserved")
             fresh = ReservationResult(exchange_id=exchange_id,
                                       status="replacement_reserved",

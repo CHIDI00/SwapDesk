@@ -22,6 +22,7 @@ def load_fixtures(conn: sqlite3.Connection) -> None:
             ("ORD-1003", "SYN-003", now),
             ("ORD-1004", "SYN-004", now),
             ("ORD-1005", "SYN-005", now),
+            ("ORD-1006", "SYN-006", now),
         ],
     )
     conn.executemany(
@@ -51,6 +52,9 @@ def load_fixtures(conn: sqlite3.Connection) -> None:
             # Eligible item with zero stock (insufficient-stock test).
             ("ITEM-06", "ORD-1005", "TRAIL-BEAST", "43", 1, 14999,
              "delivered", _days_ago(4), 0, now),
+            # Shipped, not delivered: ineligible (benchmark denial case).
+            ("ITEM-08", "ORD-1006", "COURT-CLASSIC", "41", 1, 8999,
+             "shipped", _days_ago(2), 0, now),
         ],
     )
     stock: dict[tuple[str, str], int] = {}
