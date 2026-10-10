@@ -59,16 +59,22 @@ def build_model(model_id: str | None = None):
     return ChatGoogleGenerativeAI(model=resolved)
 
 
-def build_agent(ctx: AgentContext, model=None, checkpointer=None):
+def build_agent(ctx: AgentContext, model=None, checkpointer=None, *,
+                middleware=(), state_schema=None, interrupt_after=None,
+                telemetry_enabled=True):
     """Compile one agent for one case run. Checkpointer may be shared."""
     from langchain.agents import create_agent
 
-    telemetry.init_telemetry()
-    model = telemetry.maybe_wrap_gemini(model or build_model())
+    if telemetry_enabled:
+        telemetry.init_telemetry()
+    model = model or build_model()
+    if telemetry_enabled:
+        model = telemetry.maybe_wrap_gemini(model)
     tools = build_tools(ToolContext(db_path=ctx.db_path,
                                     case_id=ctx.case_id, run_id=ctx.run_id))
     return create_agent(model, tools, system_prompt=SYSTEM_PROMPT,
-                        checkpointer=checkpointer)
+                        checkpointer=checkpointer, middleware=list(middleware),
+                        state_schema=state_schema, interrupt_after=interrupt_after)
 
 
 def _compose_input(ctx: AgentContext) -> str:
