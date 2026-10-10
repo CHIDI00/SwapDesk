@@ -1,15 +1,13 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { AppShell, PageTitle, StatusPill } from "@/components/AppShell";
+import { pageMetadata } from "@/lib/seo";
 
-export const metadata: Metadata = {
-  title: "Inbox — SwapDesk",
-  description: "Incoming exchange and return tickets handled by the SwapDesk agent.",
-  openGraph: {
-    title: "Inbox — SwapDesk",
-    description: "Incoming exchange and return tickets.",
-  },
-};
+export const metadata: Metadata = pageMetadata({
+  title: "Inbox",
+  description: "Incoming exchange and return tickets handled autonomously by the SwapDesk agent.",
+  path: "/inbox",
+});
 
 const tickets = [
   { id: "TCK-9042", who: "Maya Koenig", msg: "The Jordan 4s arrived but are too tight. Need to exchange for a size 43.", s: "success", t: "2m" },

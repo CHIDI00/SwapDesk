@@ -1,15 +1,13 @@
 import type { Metadata } from "next";
 import { AppShell, PageTitle } from "@/components/AppShell";
 import { CustomerSimulationWidget } from "@/components/CustomerSimulationWidget";
+import { pageMetadata } from "@/lib/seo";
 
-export const metadata: Metadata = {
-  title: "Customer Simulation — SwapDesk",
-  description: "Inject a customer complaint and route it to the autonomous agent.",
-  openGraph: {
-    title: "Customer Simulation — SwapDesk",
-    description: "Route a simulated customer ticket to the autonomous agent.",
-  },
-};
+export const metadata: Metadata = pageMetadata({
+  title: "Customer Simulation",
+  description: "Inject a customer complaint and route it to the SwapDesk autonomous agent.",
+  path: "/simulate",
+});
 
 export default function SimulatePage() {
   return (

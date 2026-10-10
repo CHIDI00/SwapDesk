@@ -2,12 +2,11 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { Inbox, Activity, Boxes, Database, Settings, Plug, Ticket, ChevronRight, Zap } from "lucide-react";
+import { Inbox, Boxes, Database, Settings, Plug, Ticket, ChevronRight, Zap } from "lucide-react";
 import type { ReactNode } from "react";
 
 const nav = [
   { to: "/", label: "Inbox", icon: Inbox },
-  { to: "/traces", label: "Active Traces", icon: Activity },
   { to: "/inventory", label: "Inventory", icon: Boxes },
   { to: "/database", label: "Database", icon: Database },
   { to: "/integrations", label: "Integrations", icon: Plug },
@@ -94,7 +93,7 @@ export function AppShell({ crumbs, children, metrics = true }: { crumbs: { label
       </div>
 
       {/* Mobile bottom nav */}
-      <nav aria-label="Main navigation" className="glass fixed inset-x-0 bottom-0 z-40 grid grid-cols-6 border-x-0 border-b-0 pb-[env(safe-area-inset-bottom)] md:hidden">
+      <nav aria-label="Main navigation" className="glass fixed inset-x-0 bottom-0 z-40 grid grid-cols-5 border-x-0 border-b-0 pb-[env(safe-area-inset-bottom)] md:hidden">
         {nav.map(({ to, label, icon: Icon }) => (
           <Link
             key={label}
