@@ -46,17 +46,17 @@ class AgentContext:
     consent_size: str | None = None
 
 
-def build_model():
-    """Gemini chat model from SWAPDESK_MODEL. No invented default."""
+# User-specified live model. Override with SWAPDESK_MODEL.
+DEFAULT_MODEL_ID = "gemini-3.8-flash"
+
+
+def build_model(model_id: str | None = None):
+    """Gemini chat model: explicit arg, else SWAPDESK_MODEL, else default."""
     from langchain_google_genai import ChatGoogleGenerativeAI
 
     telemetry.load_dotenv()
-    model_id = os.environ.get("SWAPDESK_MODEL")
-    if not model_id:
-        raise ConfigurationError(
-            "set SWAPDESK_MODEL to a Gemini model id "
-            "(e.g. export it next to GEMINI_API_KEY); refusing to guess one")
-    return ChatGoogleGenerativeAI(model=model_id)
+    resolved = model_id or os.environ.get("SWAPDESK_MODEL") or DEFAULT_MODEL_ID
+    return ChatGoogleGenerativeAI(model=resolved)
 
 
 def build_agent(ctx: AgentContext, model=None, checkpointer=None):

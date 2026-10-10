@@ -225,10 +225,14 @@ def test_agent_resumes_thread_without_double_effects(shop, tmp_path):
     assert _stock(shop, "AIRFLOW-RUNNER", "42") == (10, 0)
 
 
-def test_build_model_needs_explicit_id(monkeypatch):
+def test_build_model_uses_user_default(monkeypatch):
+    from langchain_google_genai import ChatGoogleGenerativeAI
+
     monkeypatch.delenv("SWAPDESK_MODEL", raising=False)
-    with pytest.raises(ConfigurationError):
-        build_model()
+    monkeypatch.setenv("GEMINI_API_KEY", "test-key-not-real")
+    client = build_model()
+    assert isinstance(client, ChatGoogleGenerativeAI)
+    assert client.model == "gemini-3.8-flash"
 
 
 def test_build_model_accepts_env_id(monkeypatch):

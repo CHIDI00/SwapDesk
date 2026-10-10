@@ -75,8 +75,8 @@ Delete `scratch.db` when done. It is git-ignored.
 
 - Return window and eligibility live in `src/swapdesk/policy.py` (`RETURN_WINDOW_DAYS = 30`).
 - Each call takes a database path, so tests and scratch work never touch real files. There is no server config yet.
-- Agent and telemetry read `.env` (git-ignored, never committed): `GEMINI_API_KEY`, `NEATLOGS_API_KEY` (both optional; without them the agent needs a passed-in model and telemetry stays local-only).
-- The live model id comes from `SWAPDESK_MODEL` (required for live runs; no default is guessed).
+- Agent and telemetry read `.env` (git-ignored, never committed; see `.env.example` for the key names): `GEMINI_API_KEY`, `NEATLOGS_API_KEY` (both optional; without them the agent needs a passed-in model and telemetry stays local-only).
+- The live model is `gemini-3.8-flash` unless `SWAPDESK_MODEL` overrides it.
 - Live model and telemetry export need working egress to Google APIs; where the network blocks them, the deterministic suites still pass.
 
 ## Project structure
