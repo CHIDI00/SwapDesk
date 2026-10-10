@@ -6,9 +6,48 @@ import hashlib
 import json
 from dataclasses import dataclass
 
-TERMINAL_EXCHANGE_STATUSES = frozenset({"cancelled", "denied"})
+TERMINAL_EXCHANGE_STATUSES = frozenset(
+    {"cancelled", "denied", "arranged", "escalated"}
+)
 
 OP_RESERVE = "reserve_replacement"
+OP_RETURN = "create_return"
+OP_LABEL = "create_label"
+OP_ARRANGE = "finalize_arranged"
+OP_RELEASE = "release_reservation"
+OP_CANCEL = "cancel_exchange"
+OP_ESCALATE = "escalate_case"
+
+# Legal fulfillment transitions on exchanges.status. Anything not listed
+# here raises IllegalTransitionError and writes nothing. Terminal states
+# have no outgoing edges.
+EXCHANGE_TRANSITIONS: dict[str, frozenset[str]] = {
+    "replacement_reserved": frozenset(
+        {"return_created", "cleanup_pending", "escalated", "denied",
+         "cancelled"}
+    ),
+    "return_created": frozenset(
+        {"label_created", "cleanup_pending", "escalated", "denied",
+         "cancelled"}
+    ),
+    "label_created": frozenset(
+        {"arranged", "cleanup_pending", "escalated", "denied", "cancelled"}
+    ),
+    "cleanup_pending": frozenset({"escalated", "cancelled"}),
+    "arranged": frozenset(),
+    "escalated": frozenset(),
+    "denied": frozenset(),
+    "cancelled": frozenset(),
+}
+
+# Case-level progress states. Fulfillment ops mirror the exchange status
+# here; received / needs_information / denied are recorded via note_case
+# and involve no fulfillment writes.
+CASE_STATES = frozenset(
+    {"received", "needs_information", "denied", "replacement_reserved",
+     "return_created", "label_created", "arranged", "cleanup_pending",
+     "escalated", "cancelled"}
+)
 
 
 @dataclass(frozen=True)
@@ -54,6 +93,7 @@ class ExchangeRecord:
     authorized_size: str
     qty: int
     status: str
+    hold_released: bool = False
 
 
 @dataclass(frozen=True)
@@ -61,6 +101,53 @@ class ReservationResult:
     exchange_id: str
     status: str
     duplicate: bool
+
+
+@dataclass(frozen=True)
+class ReturnResult:
+    exchange_id: str
+    return_id: str
+    status: str
+    duplicate: bool
+
+
+@dataclass(frozen=True)
+class LabelResult:
+    exchange_id: str
+    label_id: str
+    tracking_ref: str
+    status: str
+    duplicate: bool
+
+
+@dataclass(frozen=True)
+class FinalizeResult:
+    exchange_id: str
+    status: str
+    duplicate: bool
+
+
+@dataclass(frozen=True)
+class ReleaseResult:
+    exchange_id: str
+    status: str
+    duplicate: bool
+    hold_released: bool
+
+
+@dataclass(frozen=True)
+class ExchangeHandoff:
+    """Read-only recovery handoff. Inspect, then act with the matching op."""
+    exchange_id: str
+    case_id: str
+    status: str
+    return_id: str | None
+    label_id: str | None
+    tracking_ref: str | None
+    hold_active: bool
+    pending_cleanup: bool
+    consistent: bool
+    suggested_next: str
 
 
 def payload_hash(payload: dict) -> str:

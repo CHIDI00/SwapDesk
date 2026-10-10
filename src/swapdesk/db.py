@@ -47,11 +47,33 @@ CREATE TABLE IF NOT EXISTS exchanges (
   authorized_size TEXT NOT NULL,
   qty INTEGER NOT NULL CHECK (qty > 0),
   status TEXT NOT NULL,
+  hold_released INTEGER NOT NULL DEFAULT 0,
   created_at TEXT NOT NULL,
   updated_at TEXT NOT NULL
 );
 CREATE UNIQUE INDEX IF NOT EXISTS ux_active_exchange_item
-  ON exchanges(order_item_id) WHERE status NOT IN ('cancelled', 'denied');
+  ON exchanges(order_item_id)
+  WHERE status NOT IN ('cancelled', 'denied', 'arranged', 'escalated');
+CREATE TABLE IF NOT EXISTS returns (
+  id TEXT PRIMARY KEY,
+  exchange_id TEXT NOT NULL REFERENCES exchanges(id),
+  case_id TEXT NOT NULL,
+  order_item_id TEXT NOT NULL,
+  created_at TEXT NOT NULL
+);
+CREATE TABLE IF NOT EXISTS labels (
+  id TEXT PRIMARY KEY,
+  return_id TEXT NOT NULL REFERENCES returns(id),
+  exchange_id TEXT NOT NULL REFERENCES exchanges(id),
+  tracking_ref TEXT NOT NULL,
+  created_at TEXT NOT NULL
+);
+CREATE TABLE IF NOT EXISTS cases (
+  case_id TEXT PRIMARY KEY,
+  state TEXT NOT NULL,
+  progress_json TEXT NOT NULL DEFAULT '{}',
+  updated_at TEXT NOT NULL
+);
 CREATE TABLE IF NOT EXISTS operations (
   idempotency_key TEXT PRIMARY KEY,
   case_id TEXT NOT NULL,

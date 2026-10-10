@@ -21,6 +21,25 @@ Contact details shared in chat are withheld from this public log.
 
 ## Build log
 
+### 2026-10-10 07:37 +01:00 - Slice 2: complete mock exchange done
+
+Completed:
+
+- New tables `returns`, `labels`, `cases`; `exchanges.hold_released`; unique index now excludes `arranged`/`escalated` too. Exchange transition map enforced (`replacement_reserved` → `return_created` → `label_created` → `arranged`, with `cleanup_pending`/`escalated`/`denied`/`cancelled` escapes).
+- New ops: `create_return`, `create_label`, `finalize_arranged` (consumes hold into mock shipment), `release_reservation` (idempotent, never double-decrements), `cancel_exchange` (cancelled allows a fresh exchange id), `escalate_case` (reason required), `note_case`/`get_case` progress, read-only `verify_exchange` handoff (`suggested_next`, consistency flags).
+- `faults.py` (demo-only controls): transient, stock-deplete, post-commit crash/timeout, release-fail. Failed cleanup persists `cleanup_pending` and stays visible; same-key retry updates the op row instead of double-inserting.
+- Safety: fresh key after a committed step is rejected (re-query + reuse original key); arranged/escalated duplicates reuse the finished exchange; release after release is a recorded no-op.
+- Tests: `uv run pytest -q` 3 runs, 21 passed each (8 Slice 1 + 13 Slice 2). Two honest failures fixed same session: missing `OP_RELEASE` import; UNIQUE violation on same-key retry after failed cleanup (now UPDATEs the op row).
+- No new dependencies (stdlib + pytest only). No agent yet (Slice 4); neatlogs not installed (Slice 4).
+
+Planned:
+
+- Slice 3: deterministic checker + frozen ~30-case benchmark (no LLM judge).
+
+Tests run: `uv run pytest -q` (3 runs, 21 passed each).
+
+Failures: two development failures above, both fixed same session.
+
 ### 2026-10-10 07:09 +01:00 - Slice 1 commits re-attached to Entire checkpoints
 
 Completed:
