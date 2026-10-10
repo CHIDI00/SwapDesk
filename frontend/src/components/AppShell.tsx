@@ -93,18 +93,38 @@ export function AppShell({ crumbs, children, metrics = true }: { crumbs: { label
       </div>
 
       {/* Mobile bottom nav */}
-      <nav aria-label="Main navigation" className="glass fixed inset-x-0 bottom-0 z-40 grid grid-cols-5 border-x-0 border-b-0 pb-[env(safe-area-inset-bottom)] md:hidden">
-        {nav.map(({ to, label, icon: Icon }) => (
-          <Link
-            key={label}
-            href={to}
-            aria-current={isActive(to) ? "page" : undefined}
-            className={`flex flex-col items-center gap-1 py-2.5 text-[10px] ${isActive(to) ? "text-primary" : "text-muted-foreground"}`}
-          >
-            <Icon className="h-5 w-5" />
-            <span className="truncate">{label.split(" ")[0]}</span>
-          </Link>
-        ))}
+      <nav
+        aria-label="Main navigation"
+        className="fixed inset-x-0 bottom-0 z-40 grid grid-cols-5 border-t border-hairline bg-[#0b0b0d] px-3 pb-[calc(env(safe-area-inset-bottom)+0.6rem)] pt-2.5 shadow-[0_-16px_40px_-24px_rgba(0,0,0,0.95)] md:hidden"
+      >
+        {nav.map(({ to, label, icon: Icon }) => {
+          const active = isActive(to);
+          return (
+            <Link
+              key={label}
+              href={to}
+              aria-current={active ? "page" : undefined}
+              className="group flex flex-col items-center gap-1 py-1 transition-transform duration-150 active:scale-90"
+            >
+              <span
+                className={`grid h-8 w-[4.25rem] place-items-center rounded-full transition-all duration-200 ${
+                  active
+                    ? "bg-primary/[0.12] text-primary shadow-[inset_0_0_0_1px_rgba(91,255,159,0.22),0_0_18px_-4px_rgba(91,255,159,0.35)]"
+                    : "text-muted-foreground group-hover:text-foreground group-active:bg-white/[0.06]"
+                }`}
+              >
+                <Icon className="h-5 w-5" />
+              </span>
+              <span
+                className={`truncate max-w-full text-[10px] font-medium transition-colors ${
+                  active ? "text-primary" : "text-muted-foreground"
+                }`}
+              >
+                {label.split(" ")[0]}
+              </span>
+            </Link>
+          );
+        })}
       </nav>
     </div>
   );
