@@ -64,13 +64,26 @@ def is_exporting() -> bool:
     return _exporting
 
 
-def maybe_wrap_gemini(client):
-    """Wrap a real Gemini chat client for LLM-span capture; passthrough."""
+def maybe_wrap_provider(client):
+    """Wrap a real provider chat client for LLM-span capture; else passthrough."""
     try:
         from langchain_google_genai import ChatGoogleGenerativeAI
-        is_gemini = isinstance(client, ChatGoogleGenerativeAI)
     except Exception:
-        return client
+        ChatGoogleGenerativeAI = None
+    try:
+        from langchain_openai import ChatOpenAI
+    except Exception:
+        ChatOpenAI = None
+    supported = tuple(c for c in (ChatGoogleGenerativeAI, ChatOpenAI)
+                      if c is not None)
+    if supported and isinstance(client, supported):
+        return neatlogs.wrap(client, surface="swapdesk-agent")
+    return client
+
+
+def maybe_wrap_gemini(client):
+    """Backward-compatible alias for maybe_wrap_provider."""
+    return maybe_wrap_provider(client)
     if is_gemini:
         return neatlogs.wrap(client, surface="swapdesk-agent")
     return client
