@@ -148,8 +148,8 @@ No authentication: this is a local mock. Execution runs synchronously per reques
 
 - Return window and eligibility live in `src/swapdesk/policy.py` (`RETURN_WINDOW_DAYS = 30`).
 - Each call takes a database path, so tests and scratch work never touch real files. There is no server config yet.
-- Agent and telemetry read `.env` (git-ignored, never committed; see `.env.example` for the key names): `GEMINI_API_KEY`, `NEATLOGS_API_KEY` (both optional; without them the agent needs a passed-in model and telemetry stays local-only).
-- The live model is `gemini-3.8-flash` unless `SWAPDESK_MODEL` overrides it.
+- Agent and telemetry read `.env` (git-ignored, never committed; see `.env.example` for the key names): `GEMINI_API_KEY`, `NEATLOGS_API_KEY`, `LITELLM_API_KEY` (all optional; without a model key the agent needs a passed-in model and telemetry stays local-only).
+- The model provider swaps via env, never hardcoded: `LITELLM_API_KEY` set → hackathon LiteLLM proxy (OpenAI-compatible; `SWAPDESK_MODEL` picks from nova-micro/lite/pro, nova-2-lite, claude-haiku/sonnet-4.6/opus-4.6, default claude-haiku; override the endpoint with `LITELLM_BASE_URL`) — else `GEMINI_API_KEY` → direct Gemini (`SWAPDESK_MODEL`, default gemini-3.8-flash).
 - Live model and telemetry export need working egress to Google APIs; where the network blocks them, the deterministic suites still pass.
 
 ## Project structure

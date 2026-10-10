@@ -46,17 +46,47 @@ class AgentContext:
     consent_size: str | None = None
 
 
-# User-specified live model. Override with SWAPDESK_MODEL.
+# User-specified direct-Gemini model. Override with SWAPDESK_MODEL.
 DEFAULT_MODEL_ID = "gemini-3.8-flash"
+
+# Hackathon LiteLLM proxy (OpenAI-compatible). Override with LITELLM_BASE_URL.
+LITELLM_DEFAULT_BASE_URL = "https://litellm.vision.aivar.app/v1"
+LITELLM_DEFAULT_MODEL_ID = "claude-haiku"
+
+
+def resolve_model_id(explicit: str | None = None) -> str:
+    """Model id: explicit arg, else SWAPDESK_MODEL, else the default."""
+    return explicit or os.environ.get("SWAPDESK_MODEL") or DEFAULT_MODEL_ID
 
 
 def build_model(model_id: str | None = None):
-    """Gemini chat model: explicit arg, else SWAPDESK_MODEL, else default."""
-    from langchain_google_genai import ChatGoogleGenerativeAI
+    """Provider chat model from environment, never hardcoded to one.
 
+    LITELLM_API_KEY present → OpenAI-compatible client at the LiteLLM
+    proxy (hackathon key). Else GEMINI_API_KEY → direct Gemini. Else a
+    clear ConfigurationError. SDK retries are disabled on both paths:
+    every request is exactly one attempt, so a middleware request cap
+    means what it says.
+    """
     telemetry.load_dotenv()
-    resolved = model_id or os.environ.get("SWAPDESK_MODEL") or DEFAULT_MODEL_ID
-    return ChatGoogleGenerativeAI(model=resolved)
+    if "LITELLM_API_KEY" in os.environ:
+        from langchain_openai import ChatOpenAI
+
+        return ChatOpenAI(
+            model=model_id or os.environ.get("SWAPDESK_MODEL")
+            or LITELLM_DEFAULT_MODEL_ID,
+            base_url=os.environ.get("LITELLM_BASE_URL",
+                                    LITELLM_DEFAULT_BASE_URL),
+            api_key=os.environ["LITELLM_API_KEY"],
+            max_retries=0)
+    if "GEMINI_API_KEY" in os.environ:
+        from langchain_google_genai import ChatGoogleGenerativeAI
+
+        return ChatGoogleGenerativeAI(model=resolve_model_id(model_id),
+                                      max_retries=0)
+    raise ConfigurationError(
+        "no model provider configured: set LITELLM_API_KEY (plus "
+        "SWAPDESK_MODEL) or GEMINI_API_KEY; nothing was called")
 
 
 def build_agent(ctx: AgentContext, model=None, checkpointer=None, *,
