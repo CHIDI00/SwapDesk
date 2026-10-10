@@ -73,6 +73,8 @@ Delete `scratch.db` when done. It is git-ignored.
 
 ## Studio verification
 
+Full runbook with evidence: [docs/STUDIO_VERIFICATION.md](docs/STUDIO_VERIFICATION.md).
+
 Two graphs share one architecture (`prepare` → nested `agent` subgraph → `verify`), defined in `src/swapdesk/agent/studio_flow.py` and served from `langgraph.json`:
 
 ```bash
@@ -90,7 +92,7 @@ Example inputs (offline):
 {"scenario": "arrange"}
 {"scenario": "deny", "case_id": "DEMO-DENY-2"}
 {"scenario": "recover", "case_id": "DEMO-REC-2"}
-{"case_id": "DEMO-ARRANGE", "resume": true, "message": "status check"}
+{"case_id": "DEMO-ARRANGE-x1", "run_id": "RUN-x1", "resume": true, "message": "status check"}
 ```
 
 Example input (live, budgeted):

@@ -26,7 +26,7 @@ from ..db import connect, init_db
 from ..fixtures import load_fixtures
 from ..operations import get_case
 from .capped import BudgetExceeded, BudgetedChatModel
-from .graph import AgentContext, ConfigurationError, build_agent, derive_outcome, _compose_input
+from .graph import AgentContext, ConfigurationError, build_agent, derive_outcome, compose_input
 from .prompts import render_reply
 from .scripted import SCENARIOS, WIRING_LABEL, ScriptedChatModel, script_for
 from .tools import ToolContext, build_tools
@@ -173,7 +173,10 @@ def prepare(state: StudioState) -> dict:
         else:
             update["script_cursor"] = 0
             update["messages"] = [RemoveMessage(id=REMOVE_ALL_MESSAGES),
-                                  {"role": "user", "content": _compose_input(ctx)}]
+                                  {"role": "user",
+                                   "content": compose_input(
+                                       message, case_id, run_id,
+                                       state.get("consent_size"))}]
         return update
     except (ValueError, OSError) as exc:
         return {**cleared, "error": str(exc)}

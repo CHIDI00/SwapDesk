@@ -1,6 +1,7 @@
 """Studio regressions: real tools, discoverable loop, no provider traffic."""
 import asyncio
 import json
+import tempfile
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
@@ -25,6 +26,21 @@ def hermetic(monkeypatch, tmp_path):
     faults.clear()
     yield
     faults.clear()
+
+
+def _symlinks_allowed() -> bool:
+    try:
+        with tempfile.TemporaryDirectory() as probe:
+            Path(probe, "link").symlink_to(probe, target_is_directory=True)
+        return True
+    except (OSError, NotImplementedError):
+        return False
+
+
+requires_symlink = pytest.mark.skipif(
+    not _symlinks_allowed(),
+    reason="this user/machine cannot create symlinks (e.g. Windows "
+           "without Developer Mode); path-escape guard still reviewed")
 
 
 def test_compiled_agent_subgraph_is_discoverable():
@@ -69,6 +85,7 @@ def test_case_paths_stay_inside_root(case_id):
     assert out["reply"] is None
 
 
+@requires_symlink
 def test_symlink_escape_is_rejected(tmp_path):
     root = Path(flow._studio_root()); root.mkdir()
     outside = tmp_path / "outside"; outside.mkdir()
