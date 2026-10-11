@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import json
 from dataclasses import dataclass
+from datetime import date
 from pathlib import Path
 
 import neatlogs
@@ -27,6 +28,10 @@ class ToolContext:
     db_path: str | Path
     case_id: str
     run_id: str
+    order_id: str | None = None
+    order_item_id: str | None = None
+    requested_size: str | None = None
+    qty: int = 1
 
 
 def _key(ctx: ToolContext, name: str, attempt: int = 1) -> str:
@@ -254,6 +259,25 @@ def build_tools(ctx: ToolContext) -> list:
     def record_clarification(question: str) -> str:
         """Record what is needed from the customer. Writes no rows. The
         question must state what is missing and cannot be empty."""
+        if ctx.order_id and ctx.order_item_id and ctx.requested_size:
+            conn = _ops._db.connect(db)
+            try:
+                item_row = conn.execute(
+                    "SELECT * FROM order_items WHERE id = ? AND order_id = ?",
+                    (ctx.order_item_id, ctx.order_id)).fetchone()
+                if item_row is not None:
+                    eligible, _ = _ops.check_eligibility(
+                        _ops._row_to_item(item_row), date.today())
+                    pool = _ops.find_exchange_stock(
+                        conn, item_row["sku"], ctx.requested_size)
+                    if eligible and pool is not None and pool.available >= ctx.qty:
+                        return _err(
+                            "cannot claim the requested size is unavailable: "
+                            f"backend inventory confirms {pool.available} "
+                            "unit(s) available; continue with the exact "
+                            "requested size")
+            finally:
+                conn.close()
         try:
             _ops.note_case(db, case_id=case_id, state="needs_information",
                            detail=question)

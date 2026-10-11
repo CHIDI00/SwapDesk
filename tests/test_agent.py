@@ -160,6 +160,23 @@ def test_agent_recovers_crash_via_operation_status(shop):
     assert _stock(shop, "TRAIL-BEAST", "42") == (1, 1)
 
 
+def test_clarification_cannot_claim_available_structured_stock(shop):
+    from swapdesk.agent.tools import ToolContext, build_tools
+    from swapdesk.operations import get_case
+
+    clarify = next(tool for tool in build_tools(ToolContext(
+        db_path=shop, case_id="AG-STOCK-CLARIFY", run_id="RUN-1",
+        order_id="ORD-1002", order_item_id="ITEM-03",
+        requested_size="42", qty=1))
+        if tool.name == "record_clarification")
+    result = json.loads(clarify.invoke({
+        "question": "Size 42 is out of stock. Would you like an alternative?"}))
+
+    assert result["ok"] is False
+    assert "1 unit(s) available" in result["error"]
+    assert get_case(shop, "AG-STOCK-CLARIFY") is None
+
+
 def test_agent_loop_is_bounded(shop):
     from langgraph.errors import GraphRecursionError
 

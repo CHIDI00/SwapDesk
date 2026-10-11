@@ -29,11 +29,12 @@ Completed:
 - Agent requests accept optional structured order hints, use the SQLite checkpoint alongside the configured business database, and return verified database-derived outcomes and replies.
 - Caller-provided case IDs support explicit `resume=true` retries after execution failures, including failures before any business operation was written. Provider configuration errors return 503; execution failures return 502 with the case ID needed to resume.
 - Namespaced LangGraph checkpoint threads by case and run, preventing two tickets with the same run ID from sharing conversation state.
+- Live HTTP testing found the model claiming an available size was out of stock. Agent tools now receive structured order/item/size/quantity context and reject that unsupported clarification when saved policy and inventory show the request is eligible and available; the model then continued through the normal exchange flow.
 - Documented the agent endpoint and request example in the README.
 
-Tests run: full deterministic backend suite → 110 passed, 1 deselected (`neatlogs` doctor requires the locked SDK version). Tests ran under Python 3.14 with process-local telemetry compatibility shims because `.python-version` specifies 3.12, the available `.venv` is 3.14, and the installed `neatlogs` 1.1.8 lacks APIs required by the lockfile version 1.4.26. No live model calls.
+Tests run: full deterministic backend suite → 111 passed, 1 deselected (`neatlogs` doctor requires the locked SDK version). Tests ran under Python 3.14 with process-local telemetry compatibility shims because `.python-version` specifies 3.12, the available `.venv` is 3.14, and the installed `neatlogs` 1.1.8 lacks APIs required by the lockfile version 1.4.26. Live HTTP smoke test against the configured model provider used synthetic data and arranged an exchange with one reservation, return, label, and finalize event.
 
-Failures: initial environment-only test failures due to incompatible Python/dependency setup; resolved for the deterministic suite with test-process-only shims. No repository dependency or lock files changed.
+Failures: initial environment-only test failures due to incompatible Python/dependency setup; resolved for the deterministic suite with test-process-only shims. Initial live model run made an unsupported out-of-stock claim, now blocked by the backend guard and covered by a deterministic regression test. No repository dependency or lock files changed.
 
 ### 2026-10-10 21:45 +01:00 - cfo.ai draft business-plan deliverable complete
 

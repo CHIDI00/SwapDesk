@@ -323,8 +323,11 @@ def submit_agent_ticket(db_path, *, message: str,
     if fields:
         agent_message += "\n\nStructured ticket fields: " + json.dumps(
             fields, sort_keys=True)
-    ctx = AgentContext(db_path=db_path, case_id=cid, run_id=run_id,
-                       message=agent_message, consent_size=consent_size)
+    ctx = AgentContext(
+        db_path=db_path, case_id=cid, run_id=run_id,
+        message=agent_message, consent_size=consent_size,
+        order_id=order_id, order_item_id=order_item_id,
+        requested_size=size, qty=qty)
     checkpoint_path = Path(f"{db_path}.agent-checkpoints.sqlite")
     try:
         with sqlite_checkpointer(checkpoint_path) as checkpointer:

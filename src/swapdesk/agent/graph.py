@@ -44,6 +44,10 @@ class AgentContext:
     run_id: str
     message: str
     consent_size: str | None = None
+    order_id: str | None = None
+    order_item_id: str | None = None
+    requested_size: str | None = None
+    qty: int = 1
 
 
 # User-specified direct-Gemini model. Override with SWAPDESK_MODEL.
@@ -100,8 +104,10 @@ def build_agent(ctx: AgentContext, model=None, checkpointer=None, *,
     model = model or build_model()
     if telemetry_enabled:
         model = telemetry.maybe_wrap_gemini(model)
-    tools = build_tools(ToolContext(db_path=ctx.db_path,
-                                    case_id=ctx.case_id, run_id=ctx.run_id))
+    tools = build_tools(ToolContext(
+        db_path=ctx.db_path, case_id=ctx.case_id, run_id=ctx.run_id,
+        order_id=ctx.order_id, order_item_id=ctx.order_item_id,
+        requested_size=ctx.requested_size, qty=ctx.qty))
     return create_agent(model, tools, system_prompt=SYSTEM_PROMPT,
                         checkpointer=checkpointer, middleware=list(middleware),
                         state_schema=state_schema, interrupt_after=interrupt_after)
