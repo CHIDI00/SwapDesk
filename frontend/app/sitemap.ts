@@ -7,7 +7,7 @@ const routes: Array<{ path: string; priority: number }> = [
   { path: "/inventory", priority: 0.7 },
   { path: "/integrations", priority: 0.7 },
   { path: "/simulate", priority: 0.6 },
-  { path: "/database", priority: 0.5 },
+  { path: "/needs-input", priority: 0.6 },
   { path: "/settings", priority: 0.5 },
 ];
 

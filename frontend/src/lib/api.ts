@@ -109,7 +109,8 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
       headers: { "Content-Type": "application/json", ...(init?.headers ?? {}) },
     });
   } catch {
-    throw new ApiError(0, `API unreachable at ${API_BASE}. Is the backend running?`);
+    console.error(`SwapDesk API unreachable at ${API_BASE}. Is the backend running?`);
+    throw new ApiError(0, "Service unreachable.");
   }
   if (!res.ok) {
     let detail = res.statusText;
