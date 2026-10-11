@@ -43,6 +43,7 @@ CREATE TABLE IF NOT EXISTS runs (
   exchange_id TEXT,
   error TEXT,
   trace_id TEXT,
+  requests_spent INTEGER,
   created_at TEXT NOT NULL,
   updated_at TEXT NOT NULL,
   PRIMARY KEY (case_id, run_id)
@@ -74,6 +75,11 @@ def ensure_queue_schema(db_path: str | Path) -> None:
     conn = connect(db_path)
     try:
         conn.executescript(QUEUE_SCHEMA)
+        # Migration for databases created before requests_spent existed.
+        try:
+            conn.execute("ALTER TABLE runs ADD COLUMN requests_spent INTEGER")
+        except Exception:
+            pass
     finally:
         conn.close()
 
@@ -326,17 +332,22 @@ def claim_next_run(db_path, worker_id: str = "worker-1") -> dict | None:
 
 def finish_run(db_path, *, case_id: str, run_id: str, outcome: str | None,
                reply: str | None, exchange_id: str | None,
-               error: str | None, trace_id: str | None) -> None:
+               error: str | None, trace_id: str | None,
+               requests_spent: int | None = None) -> None:
+    """Record a run's terminal state. requests_spent is the client-side
+    count of model generations consumed (ground truth independent of
+    telemetry capture)."""
     state = "completed" if error is None else "failed"
     conn = connect(db_path)
     try:
         with _db.immediate(conn):
             conn.execute(
                 "UPDATE runs SET state = ?, outcome = ?, reply = ?, "
-                "exchange_id = ?, error = ?, trace_id = ?, updated_at = ? "
+                "exchange_id = ?, error = ?, trace_id = ?, "
+                "requests_spent = ?, updated_at = ? "
                 "WHERE case_id = ? AND run_id = ?",
                 (state, outcome, reply, exchange_id, error, trace_id,
-                 _db.utcnow(), case_id, run_id))
+                 requests_spent, _db.utcnow(), case_id, run_id))
     finally:
         conn.close()
 
@@ -376,8 +387,9 @@ def _public_status(db_path, conn, case_id: str) -> dict:
     from . import service as _service
 
     run_rows = conn.execute(
-        "SELECT run_id, state, outcome, reply, exchange_id, error, trace_id "
-        "FROM runs WHERE case_id = ? ORDER BY rowid", (case_id,)).fetchall()
+        "SELECT run_id, state, outcome, reply, exchange_id, error, trace_id, "
+        "requests_spent FROM runs WHERE case_id = ? ORDER BY rowid",
+        (case_id,)).fetchall()
     execution = _case_execution(conn, case_id)
     last = run_rows[-1]
     business = _service.case_status(db_path, case_id)
@@ -402,6 +414,7 @@ def _public_status(db_path, conn, case_id: str) -> dict:
         "cleanup": _cleanup_state(db_path, exchange_id),
         "trace_id": last["trace_id"] if last["trace_id"] else None,
         "error": last["error"] if last["state"] == "failed" else None,
+        "requests_spent": last["requests_spent"],
     }
 
 

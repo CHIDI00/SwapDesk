@@ -386,6 +386,54 @@ def test_worker_once_drains_then_exits_without_model(monkeypatch):
     assert _worker.main(["--once"]) == 0  # idempotent on idle queue
 
 
+def test_worker_flushes_telemetry_and_records_spent_on_all_paths(
+        client, monkeypatch):
+    import time as _time
+
+    import swapdesk.telemetry as _telemetry
+
+    flushed = []
+    monkeypatch.setattr(_telemetry, "flush",
+                        lambda: flushed.append(1))
+    monkeypatch.setattr(_telemetry, "init_telemetry", lambda **k: False)
+
+    ok = client.post("/v1/agent/tickets", json={
+        "message": "exchange ITEM-01 for 42",
+        "order_id": "ORD-1001", "order_item_id": "ITEM-01", "size": "42",
+        "case_id": "FLUSH-OK"}).json()["case_id"]
+    assert _drain(_arrange_model) == 1
+
+    bad = client.post("/v1/agent/tickets", json={
+        "message": "exchange ITEM-01 for 42",
+        "order_id": "ORD-1001", "order_item_id": "ITEM-01", "size": "42",
+        "case_id": "FLUSH-BAD"}).json()["case_id"]
+    # Failure path: no provider configured in this hermetic env.
+    assert _worker.drain_once(_db(), model_factory=None) is True
+    # Arrange flushed twice (run_agent's finally plus the worker's);
+    # the failed run flushed once via the worker. Flush is idempotent.
+    assert flushed == [1, 1, 1]
+
+    assert client.get(f"/v1/agent/cases/{ok}").json()["requests_spent"] == 7
+    failed = client.get(f"/v1/agent/cases/{bad}").json()
+    assert failed["execution_status"] == "failed"
+    assert failed["requests_spent"] == 0
+
+    class _Hanging(ScriptedChatModel):
+        def _generate(self, messages, stop=None, run_manager=None,
+                      **kwargs):
+            _time.sleep(30)
+            return super()._generate(
+                messages, stop=stop, run_manager=run_manager, **kwargs)
+
+    client.post("/v1/agent/tickets",
+                json={"message": "hang", "case_id": "FLUSH-TIMEOUT"})
+    _drain(lambda: _Hanging([AIMessage(content="late")]), timeout_s=1)
+    assert flushed == [1, 1, 1, 1]
+    # The budget claim happens before the hang: one in-flight request.
+    assert client.get(
+        "/v1/agent/cases/FLUSH-TIMEOUT").json()["requests_spent"] == 1
+
+
 def test_validation_and_unknown_case(client):
     assert client.post("/v1/agent/tickets",
                        json={"message": "   "}).status_code == 422

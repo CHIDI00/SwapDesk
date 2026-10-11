@@ -29,6 +29,7 @@ from pathlib import Path
 
 from . import queue as _queue
 from . import service as _service
+from . import telemetry as _telemetry
 from .agent.capped import BudgetExceeded
 from .agent.graph import ConfigurationError
 from .agent.request_budget import RequestBudget
@@ -94,40 +95,51 @@ def execute_run(db_path, *, case_id: str, run_id: str,
 
     thread = threading.Thread(target=_target, daemon=True,
                               name=f"swapdesk-{case_id}-{run_id}")
-    thread.start()
-    thread.join(timeout_s)
-    if thread.is_alive():
+    _telemetry.init_telemetry()
+    try:
+        thread.start()
+        thread.join(timeout_s)
+        if thread.is_alive():
+            _queue.finish_run(
+                db_path, case_id=case_id, run_id=run_id, outcome=None,
+                reply=None, exchange_id=None, trace_id=None,
+                requests_spent=budget.spent,
+                error=f"execution timed out after {timeout_s:g}s; the "
+                      "in-flight attempt cannot be cancelled and no retry "
+                      "was queued; explicit continue required")
+            return {"case_id": case_id, "run_id": run_id, "outcome": None,
+                    "error": "timed out", "trace_id": None}
+        if error is not None:
+            cause = getattr(error, "__cause__", None)
+            signal = cause if isinstance(
+                cause, (ConfigurationError, BudgetExceeded)) else None
+            if isinstance(error, _service.AgentExecutionError) \
+                    and signal is None:
+                message = _sanitized_agent_error(error)
+            else:
+                message = _sanitized_agent_error(
+                    signal if signal is not None else error)
+            _queue.finish_run(
+                db_path, case_id=case_id, run_id=run_id, outcome=None,
+                reply=None, exchange_id=None, trace_id=None,
+                requests_spent=budget.spent, error=message)
+            return {"case_id": case_id, "run_id": run_id, "outcome": None,
+                    "error": message, "trace_id": None}
+        assert outcome is not None
+        thread_id = f"{case_id}:{run_id}"
         _queue.finish_run(
-            db_path, case_id=case_id, run_id=run_id, outcome=None,
-            reply=None, exchange_id=None, trace_id=None,
-            error=f"execution timed out after {timeout_s:g}s; the "
-                  "in-flight attempt cannot be cancelled and no retry "
-                  "was queued; explicit continue required")
-        return {"case_id": case_id, "run_id": run_id, "outcome": None,
-                "error": "timed out", "trace_id": None}
-    if error is not None:
-        cause = getattr(error, "__cause__", None)
-        signal = cause if isinstance(
-            cause, (ConfigurationError, BudgetExceeded)) else None
-        if isinstance(error, _service.AgentExecutionError) and signal is None:
-            message = _sanitized_agent_error(error)
-        else:
-            message = _sanitized_agent_error(
-                signal if signal is not None else error)
-        _queue.finish_run(
-            db_path, case_id=case_id, run_id=run_id, outcome=None,
-            reply=None, exchange_id=None, trace_id=None, error=message)
-        return {"case_id": case_id, "run_id": run_id, "outcome": None,
-                "error": message, "trace_id": None}
-    assert outcome is not None
-    thread_id = f"{case_id}:{run_id}"
-    _queue.finish_run(
-        db_path, case_id=case_id, run_id=run_id,
-        outcome=outcome["outcome"], reply=outcome["reply"],
-        exchange_id=outcome["exchange_id"], error=None, trace_id=thread_id)
-    return {"case_id": case_id, "run_id": run_id,
-            "outcome": outcome["outcome"], "reply": outcome["reply"],
-            "exchange_id": outcome["exchange_id"], "trace_id": thread_id}
+            db_path, case_id=case_id, run_id=run_id,
+            outcome=outcome["outcome"], reply=outcome["reply"],
+            exchange_id=outcome["exchange_id"], error=None,
+            trace_id=thread_id, requests_spent=budget.spent)
+        return {"case_id": case_id, "run_id": run_id,
+                "outcome": outcome["outcome"], "reply": outcome["reply"],
+                "exchange_id": outcome["exchange_id"], "trace_id": thread_id}
+    finally:
+        # Every path flushes before returning: success, recorded
+        # failure, and timeout. --once therefore never exits with
+        # unflushed spans; the polling loop relies on the same guarantee.
+        _telemetry.flush()
 
 
 def _load_claimed(db_path, case_id: str, run_id: str) -> dict:

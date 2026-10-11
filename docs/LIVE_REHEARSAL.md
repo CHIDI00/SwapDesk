@@ -64,23 +64,71 @@ Remove-Item Env:\SWAPDESK_ENABLE_DEMO_FAULTS
 
 - Provider: hackathon LiteLLM proxy, model `claude-haiku` (from `.env`;
   values never printed, `.env` never committed).
-- Hard cap per case: `SWAPDESK_AGENT_BUDGET=12` provider requests,
-  enforced client-side by RequestBudget (13th request raises before any
-  call). Across three cases: at most 36 provider requests total.
+- **Enforced hard cap per case: `SWAPDESK_AGENT_BUDGET=12` provider
+  requests**, enforced client-side by RequestBudget (the 13th request
+  raises before any call). Across three cases: at most 36 provider
+  requests total, plus at most one non-cancellable in-flight request
+  per run at a timeout instant. Per-run consumption is persisted as
+  `requests_spent` on the run record and exposed on status reads —
+  ground truth independent of telemetry capture.
 - SDK retries forced to a single attempt (`max_retries=0` on both
   provider paths, attempts=1 on the Gemini wrapper).
 - Wall-clock bound per run: `SWAPDESK_RUN_TIMEOUT_S=300`; timeouts record
   failure and queue no retry.
 - No automatic retries or reruns anywhere in the path.
 
-## Cost ceiling (estimate, public rates)
+## Cost estimate (NOT a maximum — token limits are NOT enforced)
+
+No component caps tokens. The only enforced limits are the request
+count above and the wall-clock timeout. The $ figure below is an
+**estimate**, not a maximum:
 
 Worst case per run: 12 requests × ~10k input tokens ≈ 120k input +
 ~6k output. At public Claude Haiku 4.5 rates ($1/MTok input,
-$5/MTok output): ≈ $0.15 per run, ≈ **$0.45 for all three** — stated as
-a ceiling, not a prediction (realistic usage is ~5–10× lower). Actual
-billing goes through the hackathon LiteLLM proxy (credits), which may
-differ; real token counts will be read back from the run traces.
+$5/MTok output): ≈ $0.15 per run, ≈ **$0.45 estimated total** (realistic
+usage is ~5–10× lower). Three separate facts, not one guarantee:
+
+1. **Client request cap** (12/run, enforced): bounds generations, not
+   tokens or dollars.
+2. **Proxy billing and retry behavior** (not controlled here): actual
+   charges follow the hackathon LiteLLM proxy (credits); any
+   proxy-side retries are invisible to the client budget.
+3. **Token usage**: measured after the fact from traces, never capped
+   beforehand.
+
+## neatlogs evidence requirements (per case, mandatory)
+
+Each rehearsal case must produce, before it counts as evidence:
+
+- A completed neatlogs workflow trace with matching `case_id`, `run_id`,
+  and tested commit recorded alongside it.
+- Available model/tool inputs and outputs from the trace (concise
+  observed events only — no private chain-of-thought, no secrets).
+- Outcome plus verification evidence (saved DB state: exchanges,
+  returns, labels, stock; `requests_spent`; latency from run
+  timestamps; cost with its pricing basis).
+- For recovery (case C): the injected timeout record, the
+  operation-status lookup, the original operation key, and proof of no
+  duplicate effects (exactly one of each fulfillment row).
+
+Retrieval procedure after each case (read-only; a repo-local script can
+drive the `search_traces` / `get_trace_context` MCP tools):
+
+1. Flush (the worker flushes every path; `--once` never exits unflushed).
+2. `search_traces` for the case id; `get_trace_context` on the hit.
+3. An export attempt, a local trace id, or a flush is **not** proof —
+   only a retrieved trace counts.
+
+If retrieval fails: preserve all local evidence (status/timeline JSON,
+DB file), record the trace as **missing**, and **stop**. Do not rerun
+the model to obtain a better trace; read-only retrieval may be retried
+separately.
+
+Known capture gap (observed 2026-10-11): a completed proxy-path run can
+record `llm_calls: 0` / zero tokens in neatlogs even though the agent
+executed. Per-case `requests_spent` (client-counted, persisted) is the
+primary usage record; neatlogs token/cost fields are secondary and may
+be absent — absent fields are reported as missing, never filled in.
 
 ## Spend-control limitations (known, accepted)
 

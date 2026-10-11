@@ -101,14 +101,17 @@ Errors: `422` validation, `409` key conflict.
   "clarification": null,
   "cleanup": "none",
   "trace_id": "CASE-9f3a2c1b:RUN-1",
-  "error": null
+  "error": null,
+  "requests_spent": 7
 }
 ```
 
 While `queued`/`running`, `outcome`, `reply`, and `exchange_id` are
 `null`. `clarification` carries the question when `outcome` is
 `clarification`. `error` carries a sanitized reason only when `failed`.
-`404` unknown case. Read-only; never blocks on the worker.
+`requests_spent` is the client-counted model generations consumed by the
+latest run (usage ground truth; token figures come from traces when
+captured). `404` unknown case. Read-only; never blocks on the worker.
 
 ## GET /v1/agent/cases/{case_id}/timeline → 200
 

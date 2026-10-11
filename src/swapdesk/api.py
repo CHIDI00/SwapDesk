@@ -102,6 +102,7 @@ class AgentStatusOut(BaseModel):
     cleanup: str | None = None
     trace_id: str | None = None
     error: str | None = None
+    requests_spent: int | None = None
 
 
 class AgentContinueIn(BaseModel):
