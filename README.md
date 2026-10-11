@@ -183,10 +183,6 @@ Other scripts: `npm run build` (production build), `npm run start`, `npm run lin
 | `/simulate`     | Customer Simulation | Inject a customer complaint into the queue           |
 | `/ticket/[id]`  | Ticket Execution    | Per-ticket action timeline                           |
 
-The demo runs entirely on a client-side store (`frontend/src/store/swapdesk.tsx`). **Simulate Ticket** prepends a resolved ticket and decrements `AJ4-MIL-43` stock; **Customer Simulation** injects a ticket with an `Agent Processing` status; **Reset Mock Data** (inventory page) restores the initial state. Dashboard labels reflect the actual mock state — completion rate is computed from the queue, and cost shows "Demo Mode".
-
-SEO is configured across all routes (per-page metadata, generated Open Graph/Twitter images, `robots.txt`, `sitemap.xml`). See [`frontend/README.md`](frontend/README.md) and [`frontend/setup.md`](frontend/setup.md) for details.
-
 ## Evaluation and evidence
 
 - `eval/cases_v1.json` — frozen 30-case benchmark (`benchmark-v1`, 8 holdouts) covering arrangement, denial, clarification, and escalation, with seeded fault schedules.
