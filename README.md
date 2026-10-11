@@ -54,49 +54,65 @@ uv run pytest -q
 
 The suite is deterministic — no network, no model keys, no LLM judge.
 
-### Run the API
+### Run the API and worker
 
 ```bash
-uv run uvicorn swapdesk.api:app
+uv run uvicorn swapdesk.api:app --port 8000
+uv run python -m swapdesk.worker
 ```
 
-Interactive docs at `http://127.0.0.1:8000/docs` (generated from the implementation, always in sync). The demo database is `swapdesk.db` (override with `SWAPDESK_DB`); restarting reuses it, fixtures seed once.
+Both share `SWAPDESK_DB` (default `swapdesk.db`); agent checkpoints live
+at `<db>.agent-checkpoints.sqlite`. Interactive docs at
+`http://127.0.0.1:8000/docs` (generated from the implementation, always
+in sync). Normative customer contract:
+[`docs/API_CONTRACT.md`](docs/API_CONTRACT.md).
 
-| Method & route                 | What it does                                                              |
-| ------------------------------ | ------------------------------------------------------------------------- |
-| `POST /v1/tickets`             | Submit a ticket and run it to a verified outcome (201)                    |
-| `POST /v1/agent/tickets`       | Run natural-language input through the checkpointed LangGraph agent (201) |
-| `GET /v1/cases/{id}`           | Verified status, outcome, reply, run ids (404 unknown)                    |
-| `GET /v1/cases/{id}/timeline`  | Sanitized action/journal events (404 unknown)                             |
-| `POST /v1/cases/{id}/continue` | Continue with message/consent (404 unknown, 422 uncontinuable)            |
-| `GET /v1/fixtures`             | Synthetic orders, items, and policy for dropdowns                         |
-| `POST /v1/demo/faults`         | Demo-only: arm one failure on an operation key                            |
-| `DELETE /v1/demo/faults`       | Demo-only: disarm all failures                                            |
-| `GET /v1/health`               | Liveness probe                                                            |
+| Method & route                         | What it does                                              |
+| -------------------------------------- | --------------------------------------------------------- |
+| `POST /v1/agent/tickets`               | Accept an agent ticket, queue RUN-1, return 202 + status URL |
+| `GET /v1/agent/cases/{id}`             | Execution status + verified outcome when available (404 unknown) |
+| `GET /v1/agent/cases/{id}/timeline`    | Sanitized action/journal events with run ids (404 unknown) |
+| `POST /v1/agent/cases/{id}/continue`   | Queue a continuation run, or report terminal unchanged (404/409/422) |
+| `POST /v1/tickets`                     | Legacy deterministic demo path (201, benchmark use; frontend must not use it) |
+| `GET /v1/cases/{id}`                   | Legacy deterministic status (frontend must not use it)    |
+| `GET /v1/cases/{id}/timeline`          | Legacy deterministic timeline (frontend must not use it)  |
+| `POST /v1/cases/{id}/continue`         | Legacy deterministic continuation (frontend must not use it) |
+| `GET /v1/fixtures`                     | Synthetic orders, items, and policy for dropdowns         |
+| `POST /v1/demo/faults`                 | Disabled (403) unless `SWAPDESK_ENABLE_DEMO_FAULTS=1`     |
+| `DELETE /v1/demo/faults`               | Disabled (403) unless `SWAPDESK_ENABLE_DEMO_FAULTS=1`     |
+| `GET /v1/health`                       | Liveness probe                                            |
 
-Outcomes (`arranged`, `clarification`, `denial`, `escalation`) are response data, not transport errors. Ticket creation routes return 201 with an `outcome`; case status reads return 200. Malformed requests return 422, unknown cases 404, an unconfigured agent 503, and an agent execution failure 502 with the case identity needed to retry.
+`POST /v1/agent/tickets` returns **202 accepted** with `case_id`,
+`run_id`, `execution_status`, and `status_url` — never a completed
+outcome. `execution_status` (`queued`/`running`/`waiting_input`/
+`completed`/`failed`) is distinct from the business `outcome`
+(`arranged`/`clarification`/`denial`/`escalation`, null until a run
+completes). Malformed requests return 422, unknown cases 404,
+submission conflicts or concurrent runs 409, disabled demo controls
+403. A run is bounded by `SWAPDESK_AGENT_BUDGET` provider requests and
+`SWAPDESK_RUN_TIMEOUT_S` wall-clock seconds; failed runs are never
+retried automatically.
 
-`POST /v1/tickets` remains the deterministic demo path. Use `/v1/agent/tickets` for model-driven handling; it requires an agent provider configuration. Supply a stable `case_id` when a caller may need to retry after a gateway failure. Retry that request with the same case ID and `"resume": true` to continue from its SQLite checkpoint. The route accepts optional structured order fields as hints; the customer message remains the agent's primary input.
+`POST /v1/tickets` remains the legacy deterministic demo path used by
+benchmarks. The customer frontend must use `/v1/agent/*`. The agent
+route accepts optional structured order fields as request data; the
+customer message remains the primary input, and consent is recorded
+only when explicitly supplied.
 
 ```bash
 curl -X POST localhost:8000/v1/agent/tickets \
   -H 'Content-Type: application/json' \
-  -d '{"case_id":"CASE-CLIENT-123","message":"Exchange item ITEM-01 for size 42","order_id":"ORD-1001","order_item_id":"ITEM-01","size":"42"}'
+  -d '{"message":"Exchange item ITEM-01 for size 42","order_id":"ORD-1001","order_item_id":"ITEM-01","size":"42"}'
+
+curl localhost:8000/v1/agent/cases/CASE-xxx
+curl localhost:8000/v1/agent/cases/CASE-xxx/timeline
+curl -X POST localhost:8000/v1/agent/cases/CASE-xxx/continue \
+  -H 'Content-Type: application/json' \
+  -d '{"message":"42 is fine","consent_size":"42"}'
 ```
 
-```bash
-curl -X POST localhost:8000/v1/tickets \
-  -H 'Content-Type: application/json' \
-  -d '{"order_id":"ORD-1001","order_item_id":"ITEM-01","size":"42"}'
-
-curl localhost:8000/v1/cases/CASE-xxx
-curl localhost:8000/v1/cases/CASE-xxx/timeline
-curl -X POST localhost:8000/v1/cases/CASE-xxx/continue \
-  -H 'Content-Type: application/json' \
-  -d '{"consent_size":"42","order_id":"ORD-1005","order_item_id":"ITEM-06","size":"43"}'
-```
-
-No authentication: this is a local mock. Execution runs synchronously per request, so status reads are never blocked.
+No authentication: this is a local mock. Agent status and timeline
+reads are read-only and never block on the worker.
 
 ### Configuring the agent
 
@@ -167,6 +183,7 @@ SEO is configured across all routes (per-page metadata, generated Open Graph/Twi
 
 | Doc                                                                  | Purpose                                                                                         |
 | -------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------- |
+| [`docs/API_CONTRACT.md`](docs/API_CONTRACT.md)                         | Normative customer frontend contract (agent async path + legacy notes)                          |
 | [`docs/build-plan.md`](docs/build-plan.md)                           | Full build plan (spec, not evidence)                                                            |
 | [`docs/STUDIO_VERIFICATION.md`](docs/STUDIO_VERIFICATION.md)         | LangGraph Studio runbook with evidence                                                          |
 | [`docs/EVIDENCE_RUNNER_HARNESS.md`](docs/EVIDENCE_RUNNER_HARNESS.md) | Runner/harness evidence walk-through                                                            |

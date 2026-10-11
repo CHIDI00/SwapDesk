@@ -233,9 +233,15 @@ def derive_outcome(ctx: AgentContext) -> dict:
 
 
 def run_agent(ctx: AgentContext, model=None, checkpointer=None,
-              max_tool_calls: int = DEFAULT_MAX_TOOL_CALLS) -> dict:
-    """Run one case to a verified outcome. Bounded; flushes telemetry."""
-    agent = build_agent(ctx, model=model, checkpointer=checkpointer)
+              max_tool_calls: int = DEFAULT_MAX_TOOL_CALLS,
+              middleware=()) -> dict:
+    """Run one case to a verified outcome. Bounded; flushes telemetry.
+
+    Optional middleware (e.g. a provider-request budget) wraps model
+    calls. A recursion limit alone is not a provider-request cap.
+    """
+    agent = build_agent(ctx, model=model, checkpointer=checkpointer,
+                        middleware=list(middleware))
     config = {"configurable": {
                   "thread_id": f"{ctx.case_id}:{ctx.run_id}"},
               "recursion_limit": 2 * max_tool_calls + 5}

@@ -51,6 +51,28 @@ def _err(error: str, *, retry_same_key: bool = False,
     return json.dumps(payload, sort_keys=True)
 
 
+_STOCK_CLAIM_PHRASES = (
+    "out of stock",
+    "out-of-stock",
+    "unavailable",
+    "sold out",
+    "no stock",
+    "not in stock",
+    "only 0",
+    "0 unit",
+)
+
+
+def _claims_unavailable(question: str) -> bool:
+    """True only when the question asserts the size cannot be supplied.
+
+    The guard rejects unsupported stock claims, not every clarification
+    recorded while inventory happens to be available.
+    """
+    lowered = (question or "").lower()
+    return any(phrase in lowered for phrase in _STOCK_CLAIM_PHRASES)
+
+
 def build_tools(ctx: ToolContext) -> list:
     """Create the agent's tool list bound to one case run."""
     db = ctx.db_path
@@ -259,7 +281,8 @@ def build_tools(ctx: ToolContext) -> list:
     def record_clarification(question: str) -> str:
         """Record what is needed from the customer. Writes no rows. The
         question must state what is missing and cannot be empty."""
-        if ctx.order_id and ctx.order_item_id and ctx.requested_size:
+        if (ctx.order_id and ctx.order_item_id and ctx.requested_size
+                and _claims_unavailable(question)):
             conn = _ops._db.connect(db)
             try:
                 item_row = conn.execute(

@@ -21,6 +21,28 @@ Contact details shared in chat are withheld from this public log.
 
 ## Build log
 
+### 2026-10-11 - Reconciled async agent queue on the existing agent service path
+
+Completed:
+
+- Reconciled the `feat/api-agent-queue` queue/worker work against current `origin/main` with no force-reset and no teammate changes discarded. Emmanuel's `submit_agent_ticket()`, structured `AgentContext` fields, case-specific checkpoint threads (`case_id:run_id`), and database-derived verification are kept as the one agent execution implementation; the worker invokes it per claimed run with the run's saved request.
+- Ported durable `submissions`/`runs` records (`src/swapdesk/queue.py`): requests persisted before execution, atomic single-worker claiming with no concurrent runs per case, submission idempotency (same key/payload returns the case, same key/different payload is 409), interrupted runs marked failed on startup with no blind replay and no automatic retry of paid executions.
+- `src/swapdesk/worker.py` executes each claimed run exactly once through `service.submit_agent_ticket()` (extended additively with `run_id`/`model`/`middleware` passthrough; defaults unchanged). RequestBudget middleware from the feature branch is wired into every run so actual provider requests are capped (`SWAPDESK_AGENT_BUDGET`, default 12); recursion limits remain as loop bounds only. Explicit wall-clock timeout (`SWAPDESK_RUN_TIMEOUT_S`, default 300) with documented cancellation limits: in-flight model calls cannot be cancelled, late commits are idempotent by operation key, and timeouts queue no retry.
+- Customer contract: `POST /v1/agent/tickets` is now async 202 with `case_id`/`run_id`/`execution_status`/`status_url`; `GET /v1/agent/cases/{id}` and `/timeline` expose saved progress with run ids; continuation runs the same agent path and terminal cases return saved results with no model call. `/v1/tickets` and `/v1/cases/*` stay byte-compatible as the documented legacy deterministic path. Exact request/response examples published in `docs/API_CONTRACT.md` for frontend integration, with the 201-completed to 202-accepted change called out.
+- Narrowed the stock clarification guard to questions that actually assert unavailability (out-of-stock/unavailable/sold-out phrasing); other clarifications record normally when inventory is available. Emmanuel's out-of-stock regression test still passes; a non-stock clarification case is added.
+- `/v1/demo/faults` now returns 403 unless `SWAPDESK_ENABLE_DEMO_FAULTS=1`; customer execution never depends on it. Development CORS added for the actual frontend origins (`http://localhost:3000`, `http://127.0.0.1:3000`, override via `SWAPDESK_CORS_ORIGINS`).
+- Emmanuel's `/v1/agent/tickets` sync tests were adapted to the async flow with identical intent (clarify then continue to arranged; config failure loud without fallback; early failure then explicit continuation). His fault-recovery test now enables the demo flag explicitly.
+
+Tests run: `uv run pytest tests/test_agent_queue.py -q` (13 passed, injected scripted models, zero paid calls); `uv run pytest tests/test_api.py tests/test_agent.py tests/test_provider.py -q` (33 passed); full `uv run pytest -q` (125 passed, 1 skipped) using the locked `uv` environment. Worker boot verified (`uv run python -m swapdesk.worker` prints ready line; killed on timeout as it polls forever). No environment blockers encountered in this session.
+
+Failures: none in the reconciled path. One test-adaptation round (agent route sync doubles needed `**kwargs` for the new middleware passthrough; fault tests needed the explicit demo flag).
+
+Gaps (explicitly pending):
+
+- No paid live-model run through the queue; production path proven with injected doubles only.
+- Frontend still on the client-side mock store; integration against `docs/API_CONTRACT.md` pending with Joshua/Chidi.
+- Single local worker only; no auth, no multi-worker, no retry/backoff beyond explicit continue.
+
 ### 2026-10-11 - Expose the checkpointed agent through the API
 
 Completed:
