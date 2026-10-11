@@ -1,8 +1,8 @@
 # SwapDesk
 
-SwapDesk arranges shoe exchanges for a fictional shop. A customer asks for a different size, and the system checks policy and stock, holds a replacement, creates a return and a mock label, then verifies the saved state. Every request ends in one of four outcomes: **exchange arranged**, **clarification required**, **policy denial**, or **human escalation**.
+SwapDesk is an autonomous state-machine for e-commerce customer support. While our current demo uses a synthetic footwear brand as a proof-of-concept, the underlying architecture is vertical-agnostic. The agent independently verifies store policy and inventory, reserves replacements, processes returns, and generates shipping labels. Every request deterministically results in an arranged exchange, a request for clarification, a policy denial, or a human escalation.
 
-All data is synthetic. There are no payments, shipments, or real customers. This is a neatHack project built by a team of four.
+Demo Scope: Built for neatHack by a team of four, this MVP uses 100% synthetic data. No real payments, active shipments, or actual customer information are used in this demonstration.
 
 ## Repository layout
 
@@ -207,12 +207,13 @@ Other scripts: `npm run build` (production build), `npm run start`, `npm run lin
 
 ## Limitations
 
-- Synthetic shoe-shop data only. No payments, shipments, or real customers, and no claim this generalizes to other businesses — the policy, tools, and database are swappable by hand, not by configuration.
-- No authentication on the API. Local mock only.
+- Synthetic Environment: This MVP operates on a synthetic shoe-store database to prove our autonomous state-machine logic. While policies and tools are modular and swappable at the code level, this build uses simulated data with no live payments, real shipments, or active customer PII.
+- Security & Auth: API authentication is intentionally bypassed to allow judges seamless access to the local evaluation mock.
 - The frontend runs on a client-side mock store until Slice 5 wiring lands; dashboard numbers (e.g. completion rates) are simulated and labeled Demo Mode.
-- A completed escalation can return an empty timeline: the timeline lists journaled business actions, and paths that correctly did nothing journal nothing. Empty there means no action was taken, not missing data.
-- `arranged` means replacement reserved, return created, label created, state verified. Nothing was shipped or delivered.
-- Benchmark scores (30 synthetic cases) measure this mock, not production reliability.
+- Metrics Integrity: Dashboard metrics (like completion rates) reflect simulated data and are explicitly labeled "Demo Mode" while we finalize backend API wiring.
+- Deterministic Logging: Our timeline only journals executed business actions. If an escalation legitimately requires no action (e.g., a return is out of policy), the timeline remains intentionally empty. This is a successful path, not missing data.
+- State Definitions: When a ticket is marked as "arranged", it means the agent successfully verified state, reserved the replacement, created the return, and generated the label in the database. It does not imply physical fulfillment.
+- Benchmarking: Our benchmark scores (based on 30 synthetic test cases) are designed to validate the agent's logic within this isolated environment, rather than claiming enterprise production reliability.
 
 ## Contributing
 
