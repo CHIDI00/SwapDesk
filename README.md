@@ -12,7 +12,7 @@ src/swapdesk/      Python backend package — FastAPI, SQLite, LangGraph agent
 eval/              Frozen benchmark, deterministic checker, and run harness
 tests/             Deterministic pytest suite (no network, no model)
 docs/              Build plan, runbooks, evidence, and business deliverables
-hackathon.md       Slice-by-slice build log and team conventions
+hackathon.md       Incremental build log and team conventions
 ```
 
 ## The two halves
@@ -22,7 +22,19 @@ hackathon.md       Slice-by-slice build log and team conventions
 
 ---
 
-## Backend
+## What was planned
+
+The build ran in order: tool setup and a test commit, then the mock shop and checker before the agent, then a first working version with a measured baseline. After that came injected failures, trace reading, fixes, and a re-run for before-and-after numbers, followed by the business plan, a demo screen, and repo cleanup, ending with the video. Full spec in [`docs/build-plan.md`](docs/build-plan.md) — a plan, not evidence of what happened. What actually happened lives in [`hackathon.md`](hackathon.md).
+
+---
+
+## How the three required tools fit
+
+- **neatlogs** records every agent run: workflow and tool spans, latency, tokens, cost. Local capture works without a key; export needs `NEATLOGS_API_KEY`. Verify with `uv run python -m neatlogs doctor --local` and read back single traces with `trace get`. The agent can also query traces itself through the neatlogs MCP server.
+- **Entire** captures the context behind each commit (prompts, decisions, changes) as checkpoints. It does not prove correctness; the deterministic checker does that. Checkpoints are the paper trail for the demo's fix story.
+- **cfo.ai** holds the pricing, cost, revenue, and runway model. All figures there are assumptions under test, not observed facts. See [`docs/business/`](docs/business/) and the assumptions section below.
+
+---
 
 ### Features
 
@@ -140,6 +152,10 @@ Open Studio at `https://smith.langchain.com/studio/?baseUrl=http://127.0.0.1:812
 
 Full runbook with evidence: [`docs/STUDIO_VERIFICATION.md`](docs/STUDIO_VERIFICATION.md).
 
+### Docker and Render
+
+`Dockerfile` (pinned `uv` 0.10.8, Python 3.12-slim) serves the API and the queue worker from one container sharing one SQLite file, via `docker-entrypoint.sh`. `render.yaml` deploys it as a web service with a 1 GB persistent disk at `/data` (`SWAPDESK_DB=/data/swapdesk.db`). Secrets (`GEMINI_API_KEY`, `LITELLM_API_KEY`, `NEATLOGS_*`) are `sync: false` placeholders — fill them in the Render dashboard, never in the repo. Status: files reviewed, image never built here, nothing deployed. The free plan has no disk, so state resets on restart there.
+
 ## Frontend
 
 A Next.js 16 (Turbopack) App Router dashboard with React 19, TypeScript, and Tailwind CSS v4.
@@ -148,7 +164,7 @@ A Next.js 16 (Turbopack) App Router dashboard with React 19, TypeScript, and Tai
 
 ```bash
 cd frontend
-npm install
+npm ci
 npm run dev      # http://localhost:3000
 ```
 
@@ -162,7 +178,7 @@ Other scripts: `npm run build` (production build), `npm run start`, `npm run lin
 | `/inbox`        | Inbox               | Sample ticket stream                                 |
 | `/inventory`    | Inventory           | Stock levels that react to simulations               |
 | `/database`     | Database Schema     | Tables the agent reads/writes                        |
-| `/integrations` | Integrations        | Inbound webhook triggers (Zendesk, Shopify, Gorgias) |
+| `/integrations` | Integrations        | Mock inbound webhook URLs (Zendesk, Shopify, Gorgias) — display only, no backend |
 | `/settings`     | Agent Settings      | Autonomy/guardrail config UI                         |
 | `/simulate`     | Customer Simulation | Inject a customer complaint into the queue           |
 | `/ticket/[id]`  | Ticket Execution    | Per-ticket action timeline                           |
@@ -188,13 +204,37 @@ SEO is configured across all routes (per-page metadata, generated Open Graph/Twi
 | [`docs/STUDIO_VERIFICATION.md`](docs/STUDIO_VERIFICATION.md)         | LangGraph Studio runbook with evidence                                                          |
 | [`docs/EVIDENCE_RUNNER_HARNESS.md`](docs/EVIDENCE_RUNNER_HARNESS.md) | Runner/harness evidence walk-through                                                            |
 | [`docs/business/`](docs/business/)                                   | Business plan (MD/PDF) and financial model (XLSX) — figures are assumptions, not observed facts |
-| [`hackathon.md`](hackathon.md)                                       | Slice-by-slice build log and conventions                                                        |
+| [`hackathon.md`](hackathon.md)                                       | Incremental build log and conventions                                                           |
+
+## Troubleshooting
+
+- **A run hangs.** Agent executions are bounded by `SWAPDESK_AGENT_BUDGET` requests and `SWAPDESK_RUN_TIMEOUT_S` seconds, but an in-flight model call cannot be cancelled. Wait for the timeout to record failure; the case resumes cleanly and idempotency keys prevent double effects.
+- **A test needs symlinks and fails with error 1314.** Enable Windows Developer Mode or run the terminal as administrator.
+- **neatlogs shutdown log noise.** The SDK logs its own shutdown after stdout closes. Cosmetic; it changes no results.
+- **Ports.** API `8000`, Studio server `8123`, frontend `3000`. Pick one live path per demo (scripted Studio scenarios or API demo faults, not both).
+
+## Limitations
+
+- Synthetic shoe-shop data only. No payments, shipments, or real customers, and no claim this generalizes to other businesses — the policy, tools, and database are swappable by hand, not by configuration.
+- No authentication on the API. Local mock only.
+- The frontend runs on a client-side mock store until Slice 5 wiring lands; dashboard numbers (e.g. completion rates) are simulated and labeled Demo Mode.
+- A completed escalation can return an empty timeline: the timeline lists journaled business actions, and paths that correctly did nothing journal nothing. Empty there means no action was taken, not missing data.
+- `arranged` means replacement reserved, return created, label created, state verified. Nothing was shipped or delivered.
+- Benchmark scores (30 synthetic cases) measure this mock, not production reliability.
+
+## Submission status (pending)
+
+- Public repository with event-dated commits: in progress, not yet sanitized for submission.
+- Demo video (3 minutes or less, must cover the agent plus neatlogs, Entire, and cfo.ai): not recorded.
+- X quote-post of the official submission post with team, name, project, repo, and demo: not posted.
+- Cutoff: Monday Oct 12, 7:00–11:55 PM IST (planned close; final cutoff announced on Discord). Judging weights: agent 30, tools 25, demo 20, building in public 15, originality 10.
+- Open decisions: license choice, team publication names, video and post ownership.
 
 ## Contributing
 
 - Backend owns `src/swapdesk/` and `tests/`. Frontend owns `frontend/`.
 - Keep tests deterministic; business logic stays callable without HTTP or a model.
-- Record each slice in `hackathon.md` with the exact commands run and pass/fail counts.
+- Record each change in `hackathon.md` with the exact commands run and pass/fail counts.
 - Never commit `.env`, databases, or real customer data. `.env.example` carries key names only.
 
 ## License

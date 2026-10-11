@@ -15,11 +15,25 @@ Contact details shared in chat are withheld from this public log.
 
 ## Stack
 
-- Python with uv, FastAPI, Pydantic, SQLite, pytest, LangGraph, neatlogs (planned, not yet installed)
-- cfo.ai workspace: SwapDesk, org_id 102985 (read-only for backend work; no model changes)
+- Python with uv, FastAPI, Pydantic, SQLite, pytest, LangGraph, neatlogs (all installed; see pyproject.toml and uv.lock)
+- cfo.ai workspace: SwapDesk, org_id 102985 (business model built there; backend reads nothing from it at runtime)
 - Entire 0.11.4 with OpenCode plugin (this session)
 
 ## Build log
+
+### 2026-10-11 - README and submission docs finalized (no slice language)
+
+Completed:
+
+- README: full layout including root files; new "What was planned" and "How the three required tools fit" sections; Docker/Render setup marked reviewed-but-undeployed; integrations row labeled mock; `npm install` corrected to `npm ci`; new Troubleshooting, Limitations, and pending Submission status sections. All slice wording removed (verified zero matches).
+- `hackathon.md` stale summaries refreshed (stack, limitations, submission); history preserved untouched.
+- CFO files checked without changes: business MD carries no links, workspace access, or share URLs; pricing ($49/100/$0.50), $15k opening cash, and scenario figures stay labeled assumptions; PDF/XLSX not re-diffed here (prior byte scan plus headline match stands).
+- Event page rechecked Oct 11: weights 30/25/20/15/10; submission Oct 12 7:00–11:55 PM IST via X quote-post; cfo.ai signup card-then-cancel note; LiteLLM $20 shared budget. Unconfirmed items stay pending.
+- Audit script not run (no Ruby on this machine); checklist applied by hand. License still unchosen per instruction.
+
+Tests run: none (docs only).
+
+Failures: none.
 
 ### 2026-10-11 - Frontend integration reads plus deployment hardening
 
@@ -288,11 +302,10 @@ Pending. No URL.
 
 ## Known limitations and next steps
 
-- No backend code yet; Slice 1 is next.
-- Entire checkpoint linkage not yet verified for this session.
-- cfo.ai pricing model not built; no runtime integration claims.
-- Submission requirements to be rechecked against published pages before submission.
+- Live model and deploy paths verified only where the log says so; egress and hosting gaps are recorded per entry.
+- cfo.ai figures are assumptions under test, not observed facts.
+- Submission requirements rechecked against the published pages on Oct 11 (weights 30/25/20/15/10; cutoff Oct 12 7:00–11:55 PM IST; video and X quote-post pending).
 
 ## Submission
 
-Confirmed: none yet. Outstanding: rules recheck, public repo evidence, video, X post. Nothing published or submitted.
+Confirmed: nothing submitted. Outstanding: video (3 min or less, all three tools), X quote-post, cutoff Oct 12 7:00–11:55 PM IST, license choice, team publication names. Nothing published, deployed, or submitted.
