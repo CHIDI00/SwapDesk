@@ -21,6 +21,20 @@ Contact details shared in chat are withheld from this public log.
 
 ## Build log
 
+### 2026-10-11 - Expose the checkpointed agent through the API
+
+Completed:
+
+- Added `POST /v1/agent/tickets` as an opt-in natural-language path to the existing LangGraph agent; the deterministic `POST /v1/tickets` demo path is unchanged.
+- Agent requests accept optional structured order hints, use the SQLite checkpoint alongside the configured business database, and return verified database-derived outcomes and replies.
+- Caller-provided case IDs support explicit `resume=true` retries after execution failures, including failures before any business operation was written. Provider configuration errors return 503; execution failures return 502 with the case ID needed to resume.
+- Namespaced LangGraph checkpoint threads by case and run, preventing two tickets with the same run ID from sharing conversation state.
+- Documented the agent endpoint and request example in the README.
+
+Tests run: full deterministic backend suite → 110 passed, 1 deselected (`neatlogs` doctor requires the locked SDK version). Tests ran under Python 3.14 with process-local telemetry compatibility shims because `.python-version` specifies 3.12, the available `.venv` is 3.14, and the installed `neatlogs` 1.1.8 lacks APIs required by the lockfile version 1.4.26. No live model calls.
+
+Failures: initial environment-only test failures due to incompatible Python/dependency setup; resolved for the deterministic suite with test-process-only shims. No repository dependency or lock files changed.
+
 ### 2026-10-10 21:45 +01:00 - cfo.ai draft business-plan deliverable complete
 
 Completed:

@@ -61,6 +61,109 @@ def test_submit_arranged_and_read_back(client):
     assert fixtures["policy"]["window_days"] == 30
 
 
+def test_agent_ticket_runs_and_resumes_checkpointed_conversation(
+        client, monkeypatch):
+    from langchain_core.messages import AIMessage
+
+    from swapdesk import service
+    from swapdesk.agent.graph import run_agent as execute_agent
+    from swapdesk.agent.scripted import ScriptedChatModel, call
+
+    model = ScriptedChatModel([
+        call("get_order", {"order_id": "ORD-1001"}),
+        call("record_clarification",
+             {"question": "Which item and size do you need?"}),
+        AIMessage(content="Please provide the item and size."),
+        call("get_order", {"order_id": "ORD-1001"}),
+        call("find_exchange_stock",
+             {"sku": "AIRFLOW-RUNNER", "size": "42"}),
+        call("reserve_replacement",
+             {"order_id": "ORD-1001", "order_item_id": "ITEM-01",
+              "size": "42"}),
+        call("create_return", {"exchange_id": "EXC-ITEM-01-1"}),
+        call("create_label", {"exchange_id": "EXC-ITEM-01-1"}),
+        call("finalize_arranged", {"exchange_id": "EXC-ITEM-01-1"}),
+        AIMessage(content="Done."),
+    ])
+
+    def run_scripted(ctx, checkpointer=None):
+        return execute_agent(ctx, model=model, checkpointer=checkpointer)
+
+    monkeypatch.setattr(service, "run_agent", run_scripted)
+    first = client.post("/v1/agent/tickets", json={
+        "case_id": "API-AGENT-1", "message": "I need an exchange"})
+    assert first.status_code == 201, first.text
+    assert first.json()["outcome"] == "clarification"
+    assert first.json()["resumed"] is False
+
+    resumed = client.post("/v1/agent/tickets", json={
+        "case_id": "API-AGENT-1", "resume": True,
+        "message": "Please exchange item ITEM-01 for size 42",
+        "order_id": "ORD-1001", "order_item_id": "ITEM-01",
+        "size": "42"})
+    assert resumed.status_code == 201, resumed.text
+    assert resumed.json()["outcome"] == "arranged"
+    assert resumed.json()["resumed"] is True
+    assert resumed.json()["run_id"] == first.json()["run_id"]
+    assert "TRK-MOCK-" in resumed.json()["reply"]
+
+    timeline = client.get("/v1/cases/API-AGENT-1/timeline").json()
+    assert [event["event"] for event in timeline] == [
+        "reserved", "return_created", "label_created", "arranged"]
+
+
+def test_agent_ticket_without_provider_returns_service_unavailable(
+        client, monkeypatch):
+    from swapdesk import service
+    from swapdesk.agent.graph import ConfigurationError
+
+    def unconfigured(*args, **kwargs):
+        raise ConfigurationError("provider unavailable")
+
+    monkeypatch.setattr(service, "run_agent", unconfigured)
+    response = client.post("/v1/agent/tickets", json={
+        "case_id": "API-AGENT-NOCONFIG", "message": "exchange my shoes"})
+    assert response.status_code == 503
+    assert response.json() == {"detail": "agent is not configured"}
+
+
+def test_agent_ticket_can_resume_after_failure_before_first_write(
+        client, monkeypatch):
+    from langchain_core.messages import AIMessage
+
+    from swapdesk import service
+    from swapdesk.agent.graph import run_agent as execute_agent
+    from swapdesk.agent.scripted import ScriptedChatModel, call
+
+    model = ScriptedChatModel([
+        call("get_order", {"order_id": "ORD-1001"}),
+        call("record_clarification",
+             {"question": "Which item and size do you need?"}),
+        AIMessage(content="Please provide the item and size."),
+    ])
+    calls = 0
+
+    def fail_once(ctx, checkpointer=None):
+        nonlocal calls
+        calls += 1
+        if calls == 1:
+            raise RuntimeError("simulated provider failure")
+        return execute_agent(ctx, model=model, checkpointer=checkpointer)
+
+    monkeypatch.setattr(service, "run_agent", fail_once)
+    first = client.post("/v1/agent/tickets", json={
+        "case_id": "API-AGENT-EARLY-FAIL", "message": "I need an exchange"})
+    assert first.status_code == 502
+    assert first.json()["case_id"] == "API-AGENT-EARLY-FAIL"
+
+    resumed = client.post("/v1/agent/tickets", json={
+        "case_id": "API-AGENT-EARLY-FAIL", "resume": True,
+        "message": "I need an exchange"})
+    assert resumed.status_code == 201, resumed.text
+    assert resumed.json()["outcome"] == "clarification"
+    assert resumed.json()["resumed"] is True
+
+
 def test_denial_and_clarification_are_200_outcomes(client):
     denied = client.post("/v1/tickets", json={
         "order_id": "ORD-1001", "order_item_id": "ITEM-02", "size": "40"})

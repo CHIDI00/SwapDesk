@@ -65,6 +65,7 @@ Interactive docs at `http://127.0.0.1:8000/docs` (generated from the implementat
 | Method & route | What it does |
 |---|---|
 | `POST /v1/tickets` | Submit a ticket and run it to a verified outcome (201) |
+| `POST /v1/agent/tickets` | Run natural-language input through the checkpointed LangGraph agent (201) |
 | `GET /v1/cases/{id}` | Verified status, outcome, reply, run ids (404 unknown) |
 | `GET /v1/cases/{id}/timeline` | Sanitized action/journal events (404 unknown) |
 | `POST /v1/cases/{id}/continue` | Continue with message/consent (404 unknown, 422 uncontinuable) |
@@ -73,7 +74,15 @@ Interactive docs at `http://127.0.0.1:8000/docs` (generated from the implementat
 | `DELETE /v1/demo/faults` | Demo-only: disarm all failures |
 | `GET /v1/health` | Liveness probe |
 
-Outcomes (`arranged`, `clarification`, `denial`, `escalation`) always return 200 with an `outcome` field — a denial is an answer, not an error. Only malformed requests (422), unknown cases (404), and unexpected failures (500, generic message) are HTTP errors.
+Outcomes (`arranged`, `clarification`, `denial`, `escalation`) are response data, not transport errors. Ticket creation routes return 201 with an `outcome`; case status reads return 200. Malformed requests return 422, unknown cases 404, an unconfigured agent 503, and an agent execution failure 502 with the case identity needed to retry.
+
+`POST /v1/tickets` remains the deterministic demo path. Use `/v1/agent/tickets` for model-driven handling; it requires an agent provider configuration. Supply a stable `case_id` when a caller may need to retry after a gateway failure. Retry that request with the same case ID and `"resume": true` to continue from its SQLite checkpoint. The route accepts optional structured order fields as hints; the customer message remains the agent's primary input.
+
+```bash
+curl -X POST localhost:8000/v1/agent/tickets \
+  -H 'Content-Type: application/json' \
+  -d '{"case_id":"CASE-CLIENT-123","message":"Exchange item ITEM-01 for size 42","order_id":"ORD-1001","order_item_id":"ITEM-01","size":"42"}'
+```
 
 ```bash
 curl -X POST localhost:8000/v1/tickets \

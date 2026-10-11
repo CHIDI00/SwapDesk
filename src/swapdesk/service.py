@@ -18,7 +18,13 @@ from datetime import date
 from pathlib import Path
 
 from . import faults as _faults
-from .agent.graph import AgentContext, derive_outcome
+from .agent.graph import (
+    AgentContext,
+    ConfigurationError,
+    derive_outcome,
+    run_agent,
+    sqlite_checkpointer,
+)
 from .agent.prompts import render_reply
 from . import telemetry as _telemetry
 from .db import connect, init_db
@@ -281,6 +287,55 @@ def submit_ticket(db_path, *, order_id: str, order_item_id: str,
     verified = _verified_reply(db_path, cid)
     return {"case_id": cid, "run_id": "RUN-1", **verified,
             "attempts": result.get("attempts", {})}
+
+
+class AgentExecutionError(Exception):
+    """Agent run failed; its checkpoint can be resumed with this identity."""
+
+    def __init__(self, case_id: str, run_id: str):
+        self.case_id = case_id
+        self.run_id = run_id
+        super().__init__("agent execution failed")
+
+
+def submit_agent_ticket(db_path, *, message: str,
+                        order_id: str | None = None,
+                        order_item_id: str | None = None,
+                        size: str | None = None, qty: int = 1,
+                        consent_size: str | None = None,
+                        case_id: str | None = None,
+                        resume: bool = False) -> dict:
+    """Run a natural-language ticket through the checkpointed LangGraph agent."""
+    ensure_db(db_path)
+    cid = case_id or f"CASE-{uuid.uuid4().hex[:8]}"
+    exists = get_case(db_path, cid) is not None
+    if exists and not resume:
+        raise ValueError(f"case {cid!r} already exists; set resume=true")
+
+    run_id = "RUN-1"
+    fields = {key: value for key, value in {
+        "order_id": order_id, "order_item_id": order_item_id,
+        "size": size, "qty": qty,
+    }.items() if value is not None}
+    agent_message = message.strip()
+    if not agent_message:
+        raise ValueError("message must not be blank")
+    if fields:
+        agent_message += "\n\nStructured ticket fields: " + json.dumps(
+            fields, sort_keys=True)
+    ctx = AgentContext(db_path=db_path, case_id=cid, run_id=run_id,
+                       message=agent_message, consent_size=consent_size)
+    checkpoint_path = Path(f"{db_path}.agent-checkpoints.sqlite")
+    try:
+        with sqlite_checkpointer(checkpoint_path) as checkpointer:
+            result = run_agent(ctx, checkpointer=checkpointer)
+    except ConfigurationError:
+        raise
+    except Exception as exc:
+        raise AgentExecutionError(cid, run_id) from exc
+    return {"case_id": cid, "run_id": run_id,
+            "outcome": result["outcome"], "reply": result["reply"],
+            "exchange_id": result["exchange_id"], "resumed": resume}
 
 
 def continue_case(db_path, *, case_id: str, message: str = "",

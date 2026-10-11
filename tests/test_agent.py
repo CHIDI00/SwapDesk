@@ -193,6 +193,27 @@ def test_agent_resumes_thread_without_double_effects(shop, tmp_path):
     assert _stock(shop, "AIRFLOW-RUNNER", "42") == (10, 0)
 
 
+def test_agent_checkpoint_thread_is_scoped_to_case(shop, tmp_path):
+    first_model = ScriptedChatModel([
+        _call("get_return_policy", {}),
+        AIMessage(content="first case complete"),
+    ])
+    second_model = ScriptedChatModel([
+        _call("get_return_policy", {}),
+        AIMessage(content="second case complete"),
+    ])
+    with sqlite_checkpointer(tmp_path / "shared-checkpoint.db") as saver:
+        run_agent(_ctx(shop, case="AG-CASE-1", run="RUN-1",
+                       message="case one private marker"),
+                  model=first_model, checkpointer=saver)
+        second = run_agent(_ctx(shop, case="AG-CASE-2", run="RUN-1",
+                                message="case two"),
+                           model=second_model, checkpointer=saver)
+
+    assert all("case one private marker" not in str(message.content)
+               for message in second["messages"])
+
+
 def test_build_model_uses_user_default(monkeypatch):
     from langchain_google_genai import ChatGoogleGenerativeAI
 

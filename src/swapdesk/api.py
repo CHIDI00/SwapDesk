@@ -21,6 +21,7 @@ from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 
 from . import service
+from .agent.graph import ConfigurationError
 from .operations import OperationError
 
 FAULT_POINTS = {"transient", "deplete_stock", "crash", "timeout",
@@ -46,6 +47,26 @@ class TicketOut(BaseModel):
     reply: str
     exchange_id: str | None = None
     attempts: dict = {}
+
+
+class AgentTicketIn(BaseModel):
+    message: str = Field(min_length=1, max_length=4000)
+    order_id: str | None = Field(default=None, max_length=96)
+    order_item_id: str | None = Field(default=None, max_length=96)
+    size: str | None = Field(default=None, max_length=32)
+    qty: int = Field(default=1, ge=1)
+    consent_size: str | None = Field(default=None, max_length=32)
+    case_id: str | None = Field(default=None, min_length=1, max_length=96)
+    resume: bool = False
+
+
+class AgentTicketOut(BaseModel):
+    case_id: str
+    run_id: str
+    outcome: str
+    reply: str
+    exchange_id: str | None = None
+    resumed: bool
 
 
 class ContinueIn(BaseModel):
@@ -146,6 +167,31 @@ def submit_ticket(body: TicketIn) -> dict:
             case_id=body.case_id)
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc))
+    except OperationError:
+        return JSONResponse(
+            status_code=500, content={"detail": "internal error"})
+
+
+@app.post("/v1/agent/tickets", response_model=AgentTicketOut,
+          status_code=201, tags=["tickets"])
+def submit_agent_ticket(body: AgentTicketIn) -> dict:
+    try:
+        return service.submit_agent_ticket(
+            _db(), message=body.message, order_id=body.order_id,
+            order_item_id=body.order_item_id, size=body.size, qty=body.qty,
+            consent_size=body.consent_size, case_id=body.case_id,
+            resume=body.resume)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc))
+    except ConfigurationError:
+        raise HTTPException(status_code=503,
+                            detail="agent is not configured")
+    except service.AgentExecutionError as exc:
+        return JSONResponse(status_code=502, content={
+            "detail": "agent execution failed; retry with the same case_id "
+                      "and resume=true",
+            "case_id": exc.case_id, "run_id": exc.run_id,
+        })
     except OperationError:
         return JSONResponse(
             status_code=500, content={"detail": "internal error"})

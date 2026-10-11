@@ -230,7 +230,8 @@ def run_agent(ctx: AgentContext, model=None, checkpointer=None,
               max_tool_calls: int = DEFAULT_MAX_TOOL_CALLS) -> dict:
     """Run one case to a verified outcome. Bounded; flushes telemetry."""
     agent = build_agent(ctx, model=model, checkpointer=checkpointer)
-    config = {"configurable": {"thread_id": ctx.run_id},
+    config = {"configurable": {
+                  "thread_id": f"{ctx.case_id}:{ctx.run_id}"},
               "recursion_limit": 2 * max_tool_calls + 5}
     try:
         with neatlogs.trace(f"swapdesk:{ctx.case_id}",
