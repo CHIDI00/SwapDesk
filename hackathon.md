@@ -21,6 +21,21 @@ Contact details shared in chat are withheld from this public log.
 
 ## Build log
 
+### 2026-10-11 - Frontend integration reads plus deployment hardening
+
+Completed:
+
+- `GET /v1/agent/cases` (inbox list): durable agent-path cases newest first with unique `(created_at, case_id)` keyset cursor, validated `execution`/`outcome` filters (422 otherwise), `limit` default 25 max 100, `items`/`next_cursor`/`total`/population-wide `summary`. Every item reuses the detail resolver, so list/detail agree including the 0d8c55a run-outcome fallback; customer messages are credential-scrubbed. Read-only: SELECTs only, no model calls.
+- `GET /v1/inventory`: actual stock by SKU/size with `available = on_hand - held`, exact-match filters, `limit` default 100 max 500, stable `(sku, size)` ordering. Proven read-only: a solo call on a fresh database returns empty and leaves no tables behind (no seeding, no reservation movement). No warehouse/product fields invented.
+- `GET /v1/ready`: queue-state deployment signal (`queued_depth`, `oldest_queued_age_s`, `last_terminal_at`) documented as not proof of worker life; `/v1/health` stays liveness-only.
+- Deployment (on Emmanuel's Docker files, additive only): entrypoint rewritten so either child exiting terminates and reaps the other with the first status propagated, TERM/INT reaches both, 10s-bounded KILL escalation, plus `SWAPDESK_WORKER_CMD`/`SWAPDESK_API_CMD` overrides for testing. `uv` image pinned to locally verified `0.10.8` (was `latest`). `.dockerignore` now excludes `.env*`/`*.pem`/`*.key`; `.gitignore` gains `.env.*` while keeping `.env.example` tracked; `.langgraph_api/` ignore entry verified present. API/worker/checkpoints share `SWAPDESK_DB`'s directory by construction; empty-volume startup seeds nothing on reads and marks interrupted runs failed without replay (existing behavior, covered).
+- Access posture analyzed, nothing changed: CORS is not auth, per-run caps don't bound aggregate spend, secrets stay server-side, demo faults disabled. Recommendation recorded in `docs/API_CONTRACT.md` (platform gate or admin key + rate limits before public paid intake). Nothing deployed.
+- Contract examples published in `docs/API_CONTRACT.md` for frontend sign-off (list, inventory, readiness, access note). Hard-coded shoe-shop policy untouched; no new integrations; no agent-reasoning changes.
+
+Tests run: `uv run pytest tests/test_agent_reads.py -q` (8 passed: lists/filters/pagination/summary, list/detail agreement, escalation-without-state, inventory before/during/after finalize, read-only repeats, sanitization, readiness/access basics, OpenAPI coverage, entrypoint supervision with fake children under Git bash); `uv run pytest -q` (144 passed, 1 skipped), locked `uv` environment, zero paid calls. `docker build` unverified (Docker CLI present, daemon not running). TERM/INT supervision path documented, POSIX-only test skipped on win32.
+
+Failures: two implementation bugs found by the new tests same session — keyset cursor unpacked 2 parts into 3 names (every `next_cursor` unusable; fixed), and the entrypoint test resolved `bash` to the System32 WSL relay stub (fixed by preferring a verified Git bash and pinning it on PATH).
+
 ### 2026-10-11 - Explicit model spans for the LiteLLM-proxy path
 
 Completed:

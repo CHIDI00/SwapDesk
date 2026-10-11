@@ -6,7 +6,7 @@ ENV PYTHONUNBUFFERED=1 \
     UV_PROJECT_ENVIRONMENT=/opt/venv \
     PATH="/opt/venv/bin:$PATH"
 
-COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
+COPY --from=ghcr.io/astral-sh/uv:0.10.8 /uv /uvx /bin/
 
 WORKDIR /app
 

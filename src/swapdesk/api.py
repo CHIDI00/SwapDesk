@@ -124,6 +124,55 @@ class AgentContinueOut(BaseModel):
     exchange_id: str | None = None
 
 
+class AgentCaseItem(BaseModel):
+    case_id: str
+    message: str
+    order_id: str | None = None
+    order_item_id: str | None = None
+    size: str | None = None
+    qty: int = 1
+    execution_status: str
+    outcome: str | None = None
+    current_run_id: str | None = None
+    runs: list[str] = []
+    created_at: str
+    updated_at: str
+    reply: str | None = None
+
+
+class AgentCasesOut(BaseModel):
+    items: list[AgentCaseItem]
+    next_cursor: str | None = None
+    total: int
+    summary: dict
+
+
+class InventoryItem(BaseModel):
+    sku: str
+    size: str
+    on_hand: int
+    held: int
+    available: int
+
+
+class InventoryOut(BaseModel):
+    items: list[InventoryItem]
+    limit: int
+    offset: int
+    total: int
+    read_at: str
+
+
+class ReadinessOut(BaseModel):
+    ok: bool
+    service: str = "swapdesk"
+    queued_depth: int
+    oldest_queued_age_s: int | None = None
+    last_terminal_at: str | None = None
+    note: str = ("queue state only: a growing queued depth or age means "
+                 "no worker is draining, not that one is healthy")
+
+
 class ContinueIn(BaseModel):
     message: str = ""
     consent_size: str | None = None
@@ -271,6 +320,21 @@ def submit_agent_ticket(body: AgentTicketIn) -> dict:
             "status_url": f"/v1/agent/cases/{accepted['case_id']}"}
 
 
+@app.get("/v1/agent/cases", response_model=AgentCasesOut, tags=["cases"])
+def list_agent_cases(execution: str | None = None,
+                     outcome: str | None = None, limit: int = 25,
+                     cursor: str | None = None) -> dict:
+    """List durable agent-path cases, newest first. Read-only: no model
+    calls, no business writes. `total`/`summary` cover the full filtered
+    population, not the page."""
+    try:
+        return queue.list_agent_cases(
+            _db(), execution=execution, outcome=outcome, limit=limit,
+            cursor=cursor)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc))
+
+
 @app.get("/v1/agent/cases/{case_id}", response_model=AgentStatusOut,
          tags=["cases"])
 def read_agent_case(case_id: str) -> dict:
@@ -349,6 +413,95 @@ def continue_case(case_id: str, body: ContinueIn) -> dict:
 @app.get("/v1/fixtures", response_model=FixturesOut, tags=["fixtures"])
 def read_fixtures() -> dict:
     return service.fixture_catalog(_db())
+
+
+@app.get("/v1/inventory", response_model=InventoryOut, tags=["fixtures"])
+def read_inventory(sku: str | None = None, size: str | None = None,
+                   limit: int = 100, offset: int = 0) -> dict:
+    """Read actual stock keyed by SKU and size, ordered by (sku, size).
+    Pure read: no seeding, no reservation movement. `available` is
+    `on_hand - held`. Only SKU/size/count fields; no warehouse or
+    product names are invented."""
+    try:
+        return queue.read_inventory(
+            _db(), sku=sku, size=size, limit=limit, offset=offset)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc))
+
+
+@app.get("/v1/ready", tags=["meta"])
+def readiness() -> dict:
+    """Deployment readiness from queue state. This reports what the
+    database shows (queued depth, oldest queued age, last terminal run),
+    not worker process health: a healthy /v1/health with a growing
+    queued depth means no worker is draining. Never proof a worker
+    is alive."""
+    try:
+        listed = queue.list_agent_cases(_db(), limit=1)
+    except ValueError:  # pragma: no cover - defensive only
+        raise HTTPException(status_code=500, detail="internal error")
+    return {
+        "ok": True,
+        "service": "swapdesk",
+        "queued_depth": listed["summary"]["execution_status"].get(
+            "queued", 0),
+        "oldest_queued_age_s": _oldest_queued_age_s(),
+        "last_terminal_at": _last_terminal_at(),
+        "note": ReadinessOut.model_fields["note"].default,
+    }
+
+
+def _oldest_queued_age_s() -> int | None:
+    from datetime import datetime, timezone
+
+    from .db import connect
+
+    try:
+        conn = connect(_db())
+    except Exception:
+        return None
+    try:
+        row = conn.execute(
+            "SELECT MIN(created_at) AS oldest FROM runs "
+            "WHERE state = 'queued'").fetchone()
+    except Exception:
+        return None
+    finally:
+        try:
+            conn.close()
+        except Exception:
+            pass
+    if row is None or row["oldest"] is None:
+        return None
+    try:
+        then = datetime.fromisoformat(row["oldest"])
+        if then.tzinfo is None:
+            then = then.replace(tzinfo=timezone.utc)
+        return max(0, int((datetime.now(timezone.utc) - then)
+                          .total_seconds()))
+    except ValueError:
+        return None
+
+
+def _last_terminal_at() -> str | None:
+    from .db import connect
+
+    try:
+        conn = connect(_db())
+    except Exception:
+        return None
+    try:
+        row = conn.execute(
+            "SELECT MAX(updated_at) AS last FROM runs "
+            "WHERE state IN ('completed', 'failed')").fetchone()
+    except Exception:
+        return None
+    finally:
+        try:
+            conn.close()
+        except Exception:
+            pass
+    return row["last"] if row else None
 
 
 @app.post("/v1/demo/faults", response_model=FaultOut, tags=["demo"])

@@ -191,3 +191,103 @@ Terminal response `200`:
   `SWAPDESK_ENABLE_DEMO_FAULTS=1`. Customer execution never depends on
   them.
 - `GET /v1/fixtures`, `GET /v1/health`: unchanged, safe for the frontend.
+
+## GET /v1/agent/cases → 200 (inbox list)
+
+Newest first. Read-only: no model calls, no business writes. Each item
+uses the same resolver as the detail endpoint (list/detail agree),
+including runs without business state. `total` and `summary` cover the
+full filtered population, not the page.
+
+Query params: `execution` (one of `queued|running|waiting_input|
+completed|failed`), `outcome` (one of `arranged|clarification|denial|
+escalation`), `limit` (default 25, max 100), `cursor` (opaque,
+from a previous `next_cursor`). Invalid values are `422`.
+
+```json
+{
+  "items": [
+    {
+      "case_id": "CASE-9f3a2c1b",
+      "message": "Please exchange ITEM-01 on order ORD-1001 for size 42",
+      "order_id": "ORD-1001",
+      "order_item_id": "ITEM-01",
+      "size": "42",
+      "qty": 1,
+      "execution_status": "completed",
+      "outcome": "arranged",
+      "current_run_id": "RUN-1",
+      "runs": ["RUN-1"],
+      "created_at": "2026-10-11T07:00:00+00:00",
+      "updated_at": "2026-10-11T07:00:18+00:00",
+      "reply": "Exchange arranged: ..."
+    }
+  ],
+  "next_cursor": null,
+  "total": 1,
+  "summary": {
+    "execution_status": {"completed": 1},
+    "outcome": {"arranged": 1}
+  }
+}
+```
+
+`outcome: null` reads as `"pending"` in the outcome summary. The
+customer `message` is credential-scrubbed before return.
+
+## GET /v1/inventory → 200 (real stock)
+
+Actual stock keyed by SKU and size, ordered by `(sku, size)`.
+`available = on_hand - held`. Only SKU/size/count fields — no
+warehouse or product names invented. Pure read: unknown database reads
+as empty; nothing is seeded, reserved, released, or reset.
+
+Query params: `sku` / `size` (exact match), `limit` (default 100, max
+500), `offset` (default 0).
+
+```json
+{
+  "items": [
+    {"sku": "AIRFLOW-RUNNER", "size": "42",
+     "on_hand": 9, "held": 0, "available": 9}
+  ],
+  "limit": 100,
+  "offset": 0,
+  "total": 14,
+  "read_at": "2026-10-11T07:05:00+00:00"
+}
+```
+
+## GET /v1/ready → 200 (deployment signal, not proof)
+
+Queue-state readiness for the single-worker SQLite deployment:
+`queued_depth`, `oldest_queued_age_s`, `last_terminal_at`. A healthy
+`/v1/health` with growing queued depth/age means no worker is draining.
+This endpoint cannot prove a worker process is alive.
+
+```json
+{
+  "ok": true,
+  "service": "swapdesk",
+  "queued_depth": 0,
+  "oldest_queued_age_s": null,
+  "last_terminal_at": "2026-10-11T07:00:18+00:00",
+  "note": "queue state only: a growing queued depth or age means no worker is draining, not that one is healthy"
+}
+```
+
+## Access posture before public paid intake (analysis, no change made)
+
+- CORS is not authentication: it only lets browsers call. Anyone with
+  the URL can submit paid agent tickets today.
+- Per-run request caps bound generations per run, not aggregate spend:
+  there is no rate limiting and no cross-case budget.
+- Secrets today: provider/telemetry keys live only as server env vars
+  (never in the browser bundle, never in the image: `.env*`, `*.pem`,
+  `*.key` excluded from the build context). Keep it that way.
+- Demo faults stay disabled unless explicitly enabled.
+- Recommended before any public paid intake (not implemented here):
+  a verified platform access gate (private service + identity-aware
+  proxy) or minimal server-side protection (admin key on `POST`
+  routes plus per-IP rate limits). No access was changed in this task,
+  and nothing here was deployed.

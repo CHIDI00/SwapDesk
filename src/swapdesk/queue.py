@@ -17,10 +17,12 @@ from __future__ import annotations
 import json
 import os
 import re
+import sqlite3
 import uuid
 from pathlib import Path
 
 from . import db as _db
+from .agent.model_spans import sanitize as _sanitize
 from .db import connect
 from .models import payload_hash
 
@@ -464,3 +466,186 @@ def get_agent_timeline(db_path, case_id: str) -> list[dict] | None:
         conn.close()
     return [{**event, "run_id": run_of.get(event["op_key"])}
             for event in events]
+
+
+EXECUTION_VALUES = ("queued", "running", "waiting_input", "completed",
+                    "failed")
+OUTCOME_VALUES = ("arranged", "clarification", "denial", "escalation")
+
+DEFAULT_LIST_LIMIT = 25
+MAX_LIST_LIMIT = 100
+
+
+def _decode_cursor(cursor: str | None) -> tuple[str, str] | None:
+    """Decode an opaque page cursor into (created_at, case_id)."""
+    if cursor is None:
+        return None
+    import base64
+
+    try:
+        created_at, case_id = base64.urlsafe_b64decode(
+            cursor.encode()).decode().split("\n", 1)
+        if not created_at or not case_id:
+            raise ValueError("empty cursor fields")
+        return created_at, case_id
+    except Exception:
+        raise ValueError("malformed cursor")
+
+
+def _encode_cursor(created_at: str, case_id: str) -> str:
+    import base64
+
+    return base64.urlsafe_b64encode(
+        f"{created_at}\n{case_id}".encode()).decode()
+
+
+def _case_first_request(conn, case_id: str) -> dict:
+    row = conn.execute(
+        "SELECT request_json FROM runs WHERE case_id = ? ORDER BY rowid "
+        "LIMIT 1", (case_id,)).fetchone()
+    return json.loads(row["request_json"]) if row else {}
+
+
+def list_agent_cases(db_path, *, execution: str | None = None,
+                     outcome: str | None = None,
+                     limit: int = DEFAULT_LIST_LIMIT,
+                     cursor: str | None = None) -> dict:
+    """List durable agent-path cases, newest first. Read-only: SELECTs only,
+    no model calls, no business writes.
+
+    Each item reuses `_public_status` (the same authoritative resolver as
+    the detail endpoint), so list and detail always agree — including
+    runs without business state (0d8c55a run-outcome fallback).
+    `total` and `summary` cover the full filtered population, not the
+    page. Suitable for single-store scale (hundreds of cases).
+    """
+    if execution is not None and execution not in EXECUTION_VALUES:
+        raise ValueError(
+            f"unknown execution filter; choose one of {EXECUTION_VALUES}")
+    if outcome is not None and outcome not in OUTCOME_VALUES:
+        raise ValueError(
+            f"unknown outcome filter; choose one of {OUTCOME_VALUES}")
+    if not isinstance(limit, int) or not 1 <= limit <= MAX_LIST_LIMIT:
+        raise ValueError(
+            f"limit must be 1-{MAX_LIST_LIMIT}")
+    after = _decode_cursor(cursor)
+    ensure_queue_schema(db_path)
+    conn = connect(db_path)
+    try:
+        ids = [r["case_id"] for r in conn.execute(
+            "SELECT DISTINCT case_id FROM runs")]
+        resolved = []
+        for case_id in ids:
+            try:
+                status = _public_status(db_path, conn, case_id)
+            except Exception:
+                continue
+            first = conn.execute(
+                "SELECT created_at FROM runs WHERE case_id = ? "
+                "ORDER BY rowid LIMIT 1", (case_id,)).fetchone()
+            request = _case_first_request(conn, case_id)
+            resolved.append((first["created_at"] if first else "", case_id,
+                             status, request))
+        # Newest first; case_id breaks created_at ties uniquely.
+        resolved.sort(key=lambda row: (row[0], row[1]), reverse=True)
+        if execution is not None:
+            resolved = [r for r in resolved
+                        if r[2]["execution_status"] == execution]
+        if outcome is not None:
+            resolved = [r for r in resolved if r[2]["outcome"] == outcome]
+        total = len(resolved)
+        summary: dict = {"execution_status": {}, "outcome": {}}
+        for _, _, status, _ in resolved:
+            bucket = summary["execution_status"]
+            bucket[status["execution_status"]] = bucket.get(
+                status["execution_status"], 0) + 1
+            obucket = summary["outcome"]
+            key = status["outcome"] if status["outcome"] is not None \
+                else "pending"
+            obucket[key] = obucket.get(key, 0) + 1
+        if after is not None:
+            resolved = [r for r in resolved
+                        if (r[0], r[1]) < (after[0], after[1])]
+        page = resolved[:limit]
+        items = []
+        for created_at, case_id, status, request in page:
+            last_updated = conn.execute(
+                "SELECT updated_at FROM runs WHERE case_id = ? "
+                "ORDER BY rowid DESC LIMIT 1", (case_id,)).fetchone()
+            items.append({
+                "case_id": case_id,
+                "message": _sanitize(request.get("message", "")),
+                "order_id": request.get("order_id"),
+                "order_item_id": request.get("order_item_id"),
+                "size": request.get("size"),
+                "qty": request.get("qty", 1),
+                "execution_status": status["execution_status"],
+                "outcome": status["outcome"],
+                "current_run_id": status["current_run_id"],
+                "runs": status["runs"],
+                "created_at": created_at,
+                "updated_at": last_updated["updated_at"]
+                if last_updated else created_at,
+                "reply": status["reply"],
+            })
+        next_cursor = _encode_cursor(page[-1][0], page[-1][1]) \
+            if len(resolved) > limit else None
+        return {"items": items, "next_cursor": next_cursor, "total": total,
+                "summary": summary}
+    finally:
+        conn.close()
+
+
+DEFAULT_INVENTORY_LIMIT = 100
+MAX_INVENTORY_LIMIT = 500
+
+
+def read_inventory(db_path, *, sku: str | None = None,
+                   size: str | None = None, limit: int = 100,
+                   offset: int = 0) -> dict:
+    """Read actual stock keyed by SKU and size. Pure read: one SELECT, no
+    schema creation, no seeding, no reserve/release/cleanup. Unknown
+    database or missing tables read as empty, never an error.
+
+    Ordering is (sku, size); `available = on_hand - held`.
+    """
+    if not isinstance(limit, int) or not 1 <= limit <= MAX_INVENTORY_LIMIT:
+        raise ValueError(f"limit must be 1-{MAX_INVENTORY_LIMIT}")
+    if not isinstance(offset, int) or offset < 0:
+        raise ValueError("offset must be >= 0")
+    read_at = _db.utcnow()
+    try:
+        conn = sqlite3.connect(str(db_path), timeout=5.0)
+        conn.row_factory = sqlite3.Row
+    except Exception:
+        return {"items": [], "limit": limit, "offset": offset, "total": 0,
+                "read_at": read_at}
+    try:
+        try:
+            clauses, args = [], []
+            if sku is not None:
+                clauses.append("sku = ?")
+                args.append(sku)
+            if size is not None:
+                clauses.append("size = ?")
+                args.append(size)
+            where = f"WHERE {' AND '.join(clauses)}" if clauses else ""
+            total = conn.execute(
+                f"SELECT COUNT(*) AS n FROM stock {where}", args).fetchone()
+            rows = conn.execute(
+                f"SELECT sku, size, on_hand, held FROM stock {where} "
+                "ORDER BY sku, size LIMIT ? OFFSET ?",
+                (*args, limit, offset)).fetchall()
+        except sqlite3.OperationalError:
+            return {"items": [], "limit": limit, "offset": offset,
+                    "total": 0, "read_at": read_at}
+        return {
+            "items": [{"sku": r["sku"], "size": r["size"],
+                       "on_hand": r["on_hand"], "held": r["held"],
+                       "available": r["on_hand"] - r["held"]}
+                      for r in rows],
+            "limit": limit, "offset": offset, "total": total["n"],
+            "read_at": read_at,
+        }
+    finally:
+        conn.close()
