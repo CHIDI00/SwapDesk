@@ -164,7 +164,16 @@ def mark_startup_interrupted(db_path) -> int:
         "explicit continue required, no automatic replay")
 
 
-def main() -> None:
+def main(argv: list[str] | None = None) -> int:
+    """Run the worker. `--once` drains the queue and exits (rehearsals,
+    controlled runs); default polls forever. Returns process exit code."""
+    import argparse
+
+    parser = argparse.ArgumentParser(prog="swapdesk.worker")
+    parser.add_argument("--once", action="store_true",
+                        help="claim and execute queued runs until idle, "
+                             "then exit instead of polling forever")
+    args = parser.parse_args(argv)
     db_path = _queue.default_db_path()
     poll_ms = int(os.environ.get("SWAPDESK_WORKER_POLL_MS", "200"))
     worker_id = os.environ.get("SWAPDESK_WORKER_ID", "worker-1")
@@ -172,6 +181,10 @@ def main() -> None:
     print(f"swapdesk worker {worker_id} on {db_path} "
           f"(recovered {recovered} interrupted runs, no replay)",
           flush=True)
+    if args.once:
+        while drain_once(db_path):
+            pass
+        return 0
     with contextlib.suppress(KeyboardInterrupt):
         while True:
             claimed = _queue.claim_next_run(db_path, worker_id)
@@ -182,7 +195,8 @@ def main() -> None:
                   f"via agent service path", flush=True)
             execute_run(db_path, case_id=claimed["case_id"],
                         run_id=claimed["run_id"])
+    return 0
 
 
 if __name__ == "__main__":
-    main()
+    raise SystemExit(main())

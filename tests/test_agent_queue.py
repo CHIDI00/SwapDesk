@@ -379,6 +379,13 @@ def test_stock_guard_rejects_only_unsupported_stock_claims():
     assert allowed["ok"] is True
 
 
+def test_worker_once_drains_then_exits_without_model(monkeypatch):
+    from swapdesk import worker as _worker
+
+    assert _worker.main(["--once"]) == 0
+    assert _worker.main(["--once"]) == 0  # idempotent on idle queue
+
+
 def test_validation_and_unknown_case(client):
     assert client.post("/v1/agent/tickets",
                        json={"message": "   "}).status_code == 422
