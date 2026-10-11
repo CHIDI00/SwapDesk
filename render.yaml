@@ -1,0 +1,36 @@
+# Render Blueprint for the SwapDesk backend.
+# Deploy: Render Dashboard -> New -> Blueprint -> point at this repo.
+# One web service runs both the API and the queue worker (see
+# docker-entrypoint.sh) because they must share the same SQLite database.
+services:
+  - type: web
+    name: swapdesk-api
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /v1/health
+    # A persistent disk keeps the SQLite demo DB and agent checkpoints across
+    # deploys/restarts. Disks require a paid instance type (Starter+). On the
+    # free plan the service is ephemeral: remove `disk` and set SWAPDESK_DB to
+    # a path like /tmp/swapdesk.db, accepting that state resets on restart.
+    disk:
+      name: swapdesk-data
+      mountPath: /data
+      sizeGB: 1
+    envVars:
+      - key: SWAPDESK_DB
+        value: /data/swapdesk.db
+      # Comma-separated browser origins allowed to call the API (or "*").
+      - key: SWAPDESK_CORS_ORIGINS
+        sync: false
+      # Agent provider: set GEMINI_API_KEY, or LITELLM_API_KEY + SWAPDESK_MODEL.
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: LITELLM_API_KEY
+        sync: false
+      - key: SWAPDESK_MODEL
+        sync: false
+      # Optional neatlogs telemetry export.
+      - key: NEATLOGS_API_KEY
+        sync: false
+      - key: NEATLOGS_PROJECT_ID
+        sync: false
