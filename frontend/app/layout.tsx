@@ -81,10 +81,10 @@ const themeInitScript = `(function(){try{var t=localStorage.getItem("swapdesk-th
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" className={`${jakartaSans.variable} ${bricolage.variable} ${geistMono.variable} h-full antialiased`}>
-      <Script id="theme-init" strategy="beforeInteractive">
-        {themeInitScript}
-      </Script>
       <body className="min-h-full flex flex-col">
+        <Script id="theme-init" strategy="beforeInteractive">
+          {themeInitScript}
+        </Script>
         <SwapDeskProvider>
           {children}
           <Toaster theme="dark" position="bottom-right" richColors />
