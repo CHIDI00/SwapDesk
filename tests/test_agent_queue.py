@@ -434,6 +434,20 @@ def test_worker_flushes_telemetry_and_records_spent_on_all_paths(
         "/v1/agent/cases/FLUSH-TIMEOUT").json()["requests_spent"] == 1
 
 
+def test_status_reports_run_outcome_when_no_business_state(client):
+    """Stalled run (no writes) must not read back as null outcome."""
+    created = client.post("/v1/agent/tickets", json={
+        "message": "vague murmur", "case_id": "STATUS-STALL"})
+    assert created.status_code == 202
+    stalled = ScriptedChatModel([AIMessage(content="nothing to do")])
+    _drain(lambda: stalled)
+    status = client.get("/v1/agent/cases/STATUS-STALL").json()
+    assert status["execution_status"] == "completed"
+    assert status["outcome"] == "escalation"
+    assert "no progress" in status["reply"]
+    assert status["exchange_id"] is None
+
+
 def test_validation_and_unknown_case(client):
     assert client.post("/v1/agent/tickets",
                        json={"message": "   "}).status_code == 422

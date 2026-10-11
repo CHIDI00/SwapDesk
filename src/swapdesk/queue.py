@@ -399,7 +399,12 @@ def _public_status(db_path, conn, case_id: str) -> dict:
         exchange_id: str | None = business["exchange_id"]
         runs = business["runs"]
     else:
-        outcome, reply, exchange_id = None, None, None
+        # The agent finished without writing business state (e.g. it
+        # stalled with no progress). Report the run's own stored result
+        # instead of nulls so status never contradicts the run record.
+        outcome = last["outcome"]
+        reply = last["reply"]
+        exchange_id = last["exchange_id"]
         runs = [r["run_id"] for r in run_rows]
     clarification = reply if outcome == "clarification" else None
     return {
