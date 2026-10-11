@@ -152,10 +152,6 @@ Open Studio at `https://smith.langchain.com/studio/?baseUrl=http://127.0.0.1:812
 
 Full runbook with evidence: [`docs/STUDIO_VERIFICATION.md`](docs/STUDIO_VERIFICATION.md).
 
-### Docker and Render
-
-`Dockerfile` (pinned `uv` 0.10.8, Python 3.12-slim) serves the API and the queue worker from one container sharing one SQLite file, via `docker-entrypoint.sh`. `render.yaml` deploys it as a web service with a 1 GB persistent disk at `/data` (`SWAPDESK_DB=/data/swapdesk.db`). Secrets (`GEMINI_API_KEY`, `LITELLM_API_KEY`, `NEATLOGS_*`) are `sync: false` placeholders — fill them in the Render dashboard, never in the repo. Status: files reviewed, image never built here, nothing deployed. The free plan has no disk, so state resets on restart there.
-
 ## Frontend
 
 A Next.js 16 (Turbopack) App Router dashboard with React 19, TypeScript, and Tailwind CSS v4.
@@ -170,7 +166,7 @@ npm run dev      # http://localhost:3000
 
 Other scripts: `npm run build` (production build), `npm run start`, `npm run lint`.
 
-### Pages and demo flow
+### Pages flow
 
 | Route           | Page                | What it demos                                        |
 | --------------- | ------------------- | ---------------------------------------------------- |
@@ -218,14 +214,6 @@ Other scripts: `npm run build` (production build), `npm run start`, `npm run lin
 - `arranged` means replacement reserved, return created, label created, state verified. Nothing was shipped or delivered.
 - Benchmark scores (30 synthetic cases) measure this mock, not production reliability.
 
-## Submission status (pending)
-
-- Public repository with event-dated commits: in progress, not yet sanitized for submission.
-- Demo video (3 minutes or less, must cover the agent plus neatlogs, Entire, and cfo.ai): not recorded.
-- X quote-post of the official submission post with team, name, project, repo, and demo: not posted.
-- Cutoff: Monday Oct 12, 7:00–11:55 PM IST (planned close; final cutoff announced on Discord). Judging weights: agent 30, tools 25, demo 20, building in public 15, originality 10.
-- Open decisions: license choice, team publication names, video and post ownership.
-
 ## Contributing
 
 - Backend owns `src/swapdesk/` and `tests/`. Frontend owns `frontend/`.
@@ -235,4 +223,4 @@ Other scripts: `npm run build` (production build), `npm run start`, `npm run lin
 
 ## License
 
-No license chosen yet. Do not reuse this code until the owners add one.
+MIT — see [LICENSE](LICENSE).
