@@ -30,6 +30,8 @@ type SwapDeskContextValue = {
   summary: CaseList["summary"] | null;
   total: number;
   loading: boolean;
+  refreshing: boolean;
+  loadingMore: boolean;
   error: string | null;
   health: HealthState;
   ready: ReadyOut | null;
@@ -37,6 +39,7 @@ type SwapDeskContextValue = {
   executionFilter: string;
   setExecutionFilter: (value: string) => void;
   refresh: () => Promise<void>;
+  reload: () => Promise<void>;
   loadMore: () => Promise<void>;
   hasMore: boolean;
   submit: (body: {
@@ -59,6 +62,8 @@ export function SwapDeskProvider({ children }: { children: ReactNode }) {
   const [total, setTotal] = useState(0);
   const [cursor, setCursor] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [health, setHealth] = useState<HealthState>("unknown");
   const [ready, setReady] = useState<ReadyOut | null>(null);
@@ -96,9 +101,23 @@ export function SwapDeskProvider({ children }: { children: ReactNode }) {
     [executionFilter, fetchPage],
   );
 
-  const loadMore = useCallback(() => {
-    if (!cursor) return Promise.resolve();
-    return fetchPage(executionFilter, cursor, true);
+  const reload = useCallback(async () => {
+    setRefreshing(true);
+    try {
+      await fetchPage(executionFilter, null, false);
+    } finally {
+      setRefreshing(false);
+    }
+  }, [executionFilter, fetchPage]);
+
+  const loadMore = useCallback(async () => {
+    if (!cursor) return;
+    setLoadingMore(true);
+    try {
+      await fetchPage(executionFilter, cursor, true);
+    } finally {
+      setLoadingMore(false);
+    }
   }, [cursor, executionFilter, fetchPage]);
 
   const changeFilter = useCallback(
@@ -168,6 +187,8 @@ export function SwapDeskProvider({ children }: { children: ReactNode }) {
       summary,
       total,
       loading,
+      refreshing,
+      loadingMore,
       error,
       health,
       ready,
@@ -175,11 +196,12 @@ export function SwapDeskProvider({ children }: { children: ReactNode }) {
       executionFilter,
       setExecutionFilter: changeFilter,
       refresh,
+      reload,
       loadMore,
       hasMore: cursor !== null,
       submit,
     }),
-    [cases, summary, total, loading, error, health, ready, refreshStatus, executionFilter, changeFilter, refresh, loadMore, cursor, submit],
+    [cases, summary, total, loading, refreshing, loadingMore, error, health, ready, refreshStatus, executionFilter, changeFilter, refresh, reload, loadMore, cursor, submit],
   );
 
   return <SwapDeskContext.Provider value={value}>{children}</SwapDeskContext.Provider>;

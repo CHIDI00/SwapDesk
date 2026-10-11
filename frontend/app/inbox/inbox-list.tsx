@@ -3,6 +3,8 @@
 import Link from "next/link";
 import { StatusPill } from "@/components/AppShell";
 import { useSwapDesk } from "@/store/swapdesk";
+import { Spinner } from "@/components/ui/spinner";
+import { ListRowsSkeleton } from "@/components/ui/loading";
 import type { AgentCase } from "@/lib/api";
 
 function pillFor(c: AgentCase): "success" | "warning" | "danger" | "idle" {
@@ -15,7 +17,8 @@ function pillFor(c: AgentCase): "success" | "warning" | "danger" | "idle" {
 }
 
 export function InboxList() {
-  const { cases, total, loading, error, hasMore, loadMore, refresh } = useSwapDesk();
+  const { cases, total, loading, refreshing, loadingMore, error, hasMore, loadMore, reload } =
+    useSwapDesk();
 
   return (
     <>
@@ -24,17 +27,17 @@ export function InboxList() {
           <p className="text-sm text-warning">{error}</p>
           <button
             type="button"
-            onClick={() => void refresh()}
-            className="mt-2 text-xs font-medium text-foreground underline"
+            onClick={() => void reload()}
+            disabled={refreshing}
+            className="mt-2 inline-flex items-center gap-1.5 text-xs font-medium text-foreground underline disabled:cursor-not-allowed disabled:opacity-60"
           >
-            Retry
+            {refreshing && <Spinner className="h-3.5 w-3.5" />}
+            {refreshing ? "Retrying…" : "Retry"}
           </button>
         </div>
       )}
       <div className="panel divide-y divide-hairline overflow-hidden">
-        {loading && cases.length === 0 && (
-          <p className="p-5 text-sm text-muted-foreground">Loading saved cases…</p>
-        )}
+        {loading && cases.length === 0 && <ListRowsSkeleton rows={5} />}
         {!loading && cases.length === 0 && !error && (
           <p className="p-5 text-sm text-muted-foreground">
             No cases yet. Submit one from Customer Simulation.
@@ -64,9 +67,11 @@ export function InboxList() {
         <button
           type="button"
           onClick={() => void loadMore()}
-          className="mt-4 rounded-lg border border-hairline bg-card/60 px-4 py-2 text-xs font-medium text-foreground transition-colors hover:bg-accent/60"
+          disabled={loadingMore}
+          className="mt-4 inline-flex items-center gap-1.5 rounded-lg border border-hairline bg-card/60 px-4 py-2 text-xs font-medium text-foreground transition-colors hover:bg-accent/60 disabled:cursor-not-allowed disabled:opacity-60"
         >
-          Load more
+          {loadingMore && <Spinner className="h-3.5 w-3.5" />}
+          {loadingMore ? "Loading…" : "Load more"}
         </button>
       )}
       <p className="mt-3 font-mono text-[10px] text-muted-foreground/75">

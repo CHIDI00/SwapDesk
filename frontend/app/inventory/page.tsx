@@ -3,6 +3,8 @@
 import { useEffect, useState } from "react";
 import { AppShell, PageTitle } from "@/components/AppShell";
 import { getInventory, type InventoryItem } from "@/lib/api";
+import { Spinner } from "@/components/ui/spinner";
+import { TableRowsSkeleton } from "@/components/ui/loading";
 
 const PAGE = 100;
 
@@ -10,6 +12,7 @@ export default function InventoryPage() {
   const [items, setItems] = useState<InventoryItem[]>([]);
   const [total, setTotal] = useState(0);
   const [offset, setOffset] = useState(0);
+  const [reloadKey, setReloadKey] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -35,7 +38,7 @@ export default function InventoryPage() {
     return () => {
       cancelled = true;
     };
-  }, [offset]);
+  }, [offset, reloadKey]);
 
   return (
     <AppShell crumbs={[{ label: "SwapDesk", to: "/" }, { label: "Inventory" }]}>
@@ -46,6 +49,15 @@ export default function InventoryPage() {
       {error && (
         <div className="panel mb-4 border-warning/20 p-4">
           <p className="text-sm text-warning">{error}</p>
+          <button
+            type="button"
+            onClick={() => setReloadKey((k) => k + 1)}
+            disabled={loading}
+            className="mt-2 inline-flex items-center gap-1.5 text-xs font-medium text-foreground underline disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            {loading && <Spinner className="h-3.5 w-3.5" />}
+            {loading ? "Retrying…" : "Retry"}
+          </button>
         </div>
       )}
       <div className="panel overflow-x-auto">
@@ -60,13 +72,7 @@ export default function InventoryPage() {
             </tr>
           </thead>
           <tbody className="divide-y divide-hairline">
-            {loading && items.length === 0 && (
-              <tr>
-                <td colSpan={5} className="px-5 py-3 text-sm text-muted-foreground">
-                  Loading stock…
-                </td>
-              </tr>
-            )}
+            {loading && items.length === 0 && <TableRowsSkeleton rows={6} cols={5} />}
             {items.map((i) => (
               <tr key={`${i.sku}:${i.size}`} className="hover:bg-accent/30">
                 <td className="px-5 py-3 font-mono text-xs">{i.sku}</td>
@@ -80,24 +86,26 @@ export default function InventoryPage() {
         </table>
       </div>
       <div className="mt-4 flex items-center justify-between">
-        <span className="font-mono text-[10px] text-muted-foreground/75">
+        <span className="inline-flex items-center gap-2 font-mono text-[10px] text-muted-foreground/75">
+          {loading && items.length > 0 && <Spinner className="h-3 w-3" />}
           OFFSET {offset} OF {total} ROWS
         </span>
         <div className="flex gap-2">
           <button
             type="button"
-            disabled={offset === 0}
+            disabled={loading || offset === 0}
             onClick={() => setOffset((o) => Math.max(0, o - PAGE))}
-            className="rounded-lg border border-hairline bg-card/60 px-3 py-2 text-xs font-medium text-foreground transition-colors hover:bg-accent/60 disabled:opacity-40"
+            className="inline-flex items-center gap-1.5 rounded-lg border border-hairline bg-card/60 px-3 py-2 text-xs font-medium text-foreground transition-colors hover:bg-accent/60 disabled:cursor-not-allowed disabled:opacity-40"
           >
             Previous
           </button>
           <button
             type="button"
-            disabled={offset + PAGE >= total}
+            disabled={loading || offset + PAGE >= total}
             onClick={() => setOffset((o) => o + PAGE)}
-            className="rounded-lg border border-hairline bg-card/60 px-3 py-2 text-xs font-medium text-foreground transition-colors hover:bg-accent/60 disabled:opacity-40"
+            className="inline-flex items-center gap-1.5 rounded-lg border border-hairline bg-card/60 px-3 py-2 text-xs font-medium text-foreground transition-colors hover:bg-accent/60 disabled:cursor-not-allowed disabled:opacity-40"
           >
+            {loading && items.length > 0 && <Spinner className="h-3.5 w-3.5" />}
             Next
           </button>
         </div>

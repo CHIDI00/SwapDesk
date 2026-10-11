@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { getCase, listCases, type AgentCase, type CaseDetail } from "@/lib/api";
+import { ListRowsSkeleton } from "@/components/ui/loading";
 
 type Row = AgentCase & { question: string | null };
 
@@ -51,9 +52,7 @@ export function NeedsInputList() {
         </div>
       )}
       <div className="panel divide-y divide-hairline overflow-hidden">
-        {loading && (
-          <p className="p-5 text-sm text-muted-foreground">Loading cases that need you…</p>
-        )}
+        {loading && <ListRowsSkeleton rows={4} />}
         {!loading && rows.length === 0 && !error && (
           <p className="p-5 text-sm text-muted-foreground">
             Nothing waiting. Every case is moving without you.

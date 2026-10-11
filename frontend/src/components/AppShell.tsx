@@ -40,7 +40,7 @@ function BackendStatus({ expanded }: { expanded: boolean }) {
     };
   }, []);
 
-  const label = state === "live" ? "Service live" : state === "down" ? "Service unreachable" : "Checking service";
+  const label = state === "live" ? "Online" : state === "down" ? "Offline" : "Checking";
   return (
     <div
       className={`grid h-10 place-items-center rounded-xl border border-hairline text-xs text-muted-foreground ${expanded ? "w-full grid-cols-none px-3" : "w-10"}`}

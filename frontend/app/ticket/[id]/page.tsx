@@ -7,6 +7,8 @@ import { ArrowLeft, Clock3, ShieldAlert, ShieldCheck } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
 import { useCaseDetail } from "@/lib/use-case";
 import { isTerminalExecution } from "@/lib/api";
+import { Spinner } from "@/components/ui/spinner";
+import { Skeleton } from "@/components/ui/skeleton";
 
 function ExecutionBadge({ status, label }: { status: string; label: string }) {
   const escalated = label.toLowerCase().includes("escalat");
@@ -89,7 +91,14 @@ function ContinueForm({ caseId }: { caseId: string }) {
         disabled={sending}
         className="inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-70"
       >
-        {sending ? "Sending…" : "Send reply"}
+        {sending ? (
+          <>
+            <Spinner className="h-4 w-4" />
+            Sending…
+          </>
+        ) : (
+          "Send reply"
+        )}
       </button>
     </form>
   );
@@ -122,8 +131,23 @@ function TicketDetailContent() {
         </header>
 
         {loading && !detail && (
-          <div className="panel p-6">
-            <p className="text-sm text-muted-foreground">Loading saved case…</p>
+          <div className="space-y-6" aria-hidden="true">
+            <div className="grid gap-3 sm:grid-cols-3">
+              {[0, 1, 2].map((i) => (
+                <div key={i} className="panel flex items-center gap-3 p-4">
+                  <Skeleton className="h-9 w-9 rounded-xl" />
+                  <div className="min-w-0 flex-1 space-y-2">
+                    <Skeleton className="h-3 w-16" />
+                    <Skeleton className="h-4 w-28" />
+                  </div>
+                </div>
+              ))}
+            </div>
+            <div className="panel space-y-3 p-5">
+              <Skeleton className="h-4 w-32" />
+              <Skeleton className="h-3.5 w-full" />
+              <Skeleton className="h-3.5 w-4/5" />
+            </div>
           </div>
         )}
 
@@ -145,7 +169,7 @@ function TicketDetailContent() {
           <>
             <section className="grid gap-3 sm:grid-cols-3">
               <div className="panel flex items-center gap-3 p-4">
-                <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl border border-hairline bg-white/[0.025] text-muted-foreground">
+                <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl border border-hairline bg-[var(--surface)] text-muted-foreground">
                   {detail.execution_status === "failed" ? (
                     <ShieldAlert className="h-4 w-4" />
                   ) : isTerminalExecution(detail.execution_status) ? (

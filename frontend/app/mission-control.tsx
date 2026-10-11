@@ -5,6 +5,8 @@ import { useState } from "react";
 import { ArrowUpRight, Check, ChevronDown, Clock3, ShieldAlert } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
 import { useSwapDesk } from "@/store/swapdesk";
+import { Spinner } from "@/components/ui/spinner";
+import { TableRowsSkeleton } from "@/components/ui/loading";
 import type { AgentCase } from "@/lib/api";
 
 type Filter = "all" | "active" | "needs-input" | "done" | "failed";
@@ -37,6 +39,8 @@ export function MissionControl() {
     summary,
     total,
     loading,
+    refreshing,
+    loadingMore,
     error,
     health,
     ready,
@@ -45,14 +49,14 @@ export function MissionControl() {
     setExecutionFilter,
     hasMore,
     loadMore,
-    refresh,
+    reload,
   } = useSwapDesk();
   const [filter, setFilter] = useState<Filter>("all");
   const visibleTickets = cases.filter((ticket) => matchesFilter(ticket, filter));
 
   const queuedDepth = ready?.queued_depth ?? 0;
   const backendLabel =
-    health === "online" ? "Backend online" : health === "offline" ? "Backend offline" : "Checking…";
+    health === "online" ? "Online" : health === "offline" ? "Offline" : "Checking…";
 
   const execCounts = summary?.execution_status ?? {};
   const outcomeCounts = summary?.outcome ?? {};
@@ -141,13 +145,14 @@ export function MissionControl() {
             <button
               type="button"
               onClick={() => {
-                void refresh();
+                void reload();
                 void refreshStatus();
               }}
-              className="inline-flex items-center gap-2 rounded-lg border border-hairline bg-card/65 px-3 py-2 text-xs text-muted-foreground transition-colors hover:bg-accent/60"
+              disabled={refreshing}
+              className="inline-flex items-center gap-2 rounded-lg border border-hairline bg-card/65 px-3 py-2 text-xs text-muted-foreground transition-colors hover:bg-accent/60 disabled:cursor-not-allowed disabled:opacity-60"
             >
-              <Clock3 className="h-3.5 w-3.5" />
-              Refresh
+              {refreshing ? <Spinner className="h-3.5 w-3.5" /> : <Clock3 className="h-3.5 w-3.5" />}
+              {refreshing ? "Refreshing…" : "Refresh"}
             </button>
           </div>
         </section>
@@ -247,11 +252,7 @@ export function MissionControl() {
               </thead>
               <tbody className="divide-y divide-hairline">
                 {loading && visibleTickets.length === 0 && (
-                  <tr>
-                    <td colSpan={6} className="px-5 py-4 text-sm text-muted-foreground">
-                      Loading saved cases…
-                    </td>
-                  </tr>
+                  <TableRowsSkeleton rows={5} cols={6} />
                 )}
                 {!loading && visibleTickets.length === 0 && !error && (
                   <tr>
@@ -303,9 +304,11 @@ export function MissionControl() {
                 <button
                   type="button"
                   onClick={() => void loadMore()}
-                  className="text-xs text-muted-foreground transition hover:text-foreground"
+                  disabled={loadingMore}
+                  className="inline-flex items-center gap-1.5 text-xs text-muted-foreground transition hover:text-foreground disabled:cursor-not-allowed disabled:opacity-60"
                 >
-                  Load more
+                  {loadingMore && <Spinner className="h-3.5 w-3.5" />}
+                  {loadingMore ? "Loading…" : "Load more"}
                 </button>
               )}
               <Link href="/inbox" className="group inline-flex items-center gap-1.5 text-xs text-muted-foreground transition hover:text-foreground">
