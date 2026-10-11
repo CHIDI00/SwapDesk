@@ -21,6 +21,38 @@ Contact details shared in chat are withheld from this public log.
 
 ## Build log
 
+### 2026-10-10 21:45 +01:00 - cfo.ai draft business-plan deliverable complete
+
+Completed:
+
+- Added supplier-built cfo.ai outputs byte-identical to `docs/business/`: [SwapDesk-Business-Plan.md](docs/business/SwapDesk-Business-Plan.md), [SwapDesk-Business-Plan.pdf](docs/business/SwapDesk-Business-Plan.pdf), [SwapDesk-Financial-Model.xlsx](docs/business/SwapDesk-Financial-Model.xlsx). No numbers regenerated or changed.
+- Model covers Base (Main-Scenario), Growth, and Bad Reliability scenarios over October 2026–September 2028. Pricing ($49/store/month incl. 100 verified arrangements; $0.50 per extra), growth, support time, and $15,000 opening cash are assumptions, not observed facts. Hackathon credits excluded from recurring economics.
+- Reviewed all three files for sensitive content: no emails, phone numbers, API keys, or credentials found (byte scan of PDF/XLSX, full read of MD). Headline figures in the workbook match the MD summary.
+- No claim made of profitability, validated demand, or production reliability: Main-Scenario ends at ($588) operating profit, demand/pricing unvalidated per the plan itself, and live benchmark/model-decision gaps remain open (see runner/harness evidence entry).
+
+Gaps (explicitly pending):
+
+- cfo.ai account/card step, business-plan submission file packaging, video, X post.
+
+Tests run: none (documentation packaging only).
+
+Failures: none.
+
+### 2026-10-10 20:50 +01:00 - Runner/harness evidence saved for submission
+
+Completed:
+
+- Evidence doc `docs/EVIDENCE_RUNNER_HARNESS.md`: controlled 2-run live comparison of the D1-final-sale denial evidence path. BEFORE (controlled reproduction, trace `79a02458…`) loses the persisted reason (`expected message containing 'final sale', got ''`); AFTER (trace `8d4b7cc8…`) preserves it, checker passes, zero side effects in both. Diagnostic trace `0b32a1f5…` retained as reference. Fix commit `90c89d8`, checkpoint `01M4KJS2K88G9T2AWH11WVZG44`. Runner/harness correctness only; no model-reasoning claim.
+- Sanitized: trace IDs plus synthetic fixture data only. No credentials, keys, session transcripts, temp worktrees, databases, or experimental code committed.
+
+Gaps (explicitly pending):
+
+- No full 42-run re-baseline; V1/V2 scores provisional. Recovery paths and model decision errors (v2 A13/C3) uncovered. No video, X post, or submission artifacts.
+
+Tests run: none (packaging only; prior deterministic suite 106 passed, 1 skipped).
+
+Failures: none.
+
 ### 2026-10-10 09:00 +01:00 - Anthropic removal, commit convention, Gemini key test
 
 Completed:

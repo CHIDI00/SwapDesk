@@ -178,7 +178,8 @@ def _run_standard(db_path, case: dict, run_tag: str = "r1",
             db_path, case_id=cid, run_id=run_id,
             op_key=_key(cid, run_tag, "reserve"),
             order_id=case["order_id"], order_item_id=case["order_item_id"],
-            size=authorized, qty=qty, requested_size=size)
+            size=authorized, qty=qty, requested_size=size,
+            consent=authorized != size)
 
     try:
         res = _attempt(log, "reserve", do_reserve)

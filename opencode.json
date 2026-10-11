@@ -5,6 +5,14 @@
       "type": "remote",
       "url": "https://api.cfo.ai/mcp",
       "enabled": true
+    },
+    "neatlogs": {
+      "type": "remote",
+      "url": "https://ingest.neatlogs.com/mcp",
+      "enabled": true,
+      "headers": {
+        "Authorization": "Bearer {env:NEATLOGS_API_KEY}"
+      }
     }
   }
 }

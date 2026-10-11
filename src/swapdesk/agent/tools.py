@@ -134,15 +134,17 @@ def build_tools(ctx: ToolContext) -> list:
     @neatlogs.span(kind="TOOL", tool_name="reserve_replacement")
     def reserve_replacement(order_id: str, order_item_id: str, size: str,
                             qty: int = 1, requested_size: str | None = None,
+                            consent: bool = False,
                             attempt: int = 1) -> str:
         """Hold one replacement unit of the exact size. Pass
-        requested_size when the customer consented to a different size."""
+        requested_size plus consent=true only when the customer
+        explicitly accepted a different size."""
         key = _key(ctx, "reserve", attempt)
         try:
             res = _ops.reserve_replacement(
                 db, case_id=case_id, run_id=run_id, op_key=key,
                 order_id=order_id, order_item_id=order_item_id, size=size,
-                qty=qty, requested_size=requested_size)
+                qty=qty, requested_size=requested_size, consent=consent)
         except (_ops.TransientError, _ops.WorkerCrashedError) as exc:
             return _err(str(exc), retry_same_key=True, op_key=key)
         except _ops.OperationError as exc:
@@ -238,20 +240,45 @@ def build_tools(ctx: ToolContext) -> list:
     @tool
     @neatlogs.span(kind="TOOL", tool_name="record_denial")
     def record_denial(reason: str) -> str:
-        """Record a policy denial. Writes no fulfillment rows."""
-        _ops.note_case(db, case_id=case_id, state="denied", detail=reason)
+        """Record a policy denial. Writes no fulfillment rows. The reason
+        must quote the observed fact and cannot be empty."""
+        try:
+            _ops.note_case(db, case_id=case_id, state="denied",
+                           detail=reason)
+        except _ops.OperationError as exc:
+            return _err(str(exc))
         return _ok(state="denied")
 
     @tool
     @neatlogs.span(kind="TOOL", tool_name="record_clarification")
     def record_clarification(question: str) -> str:
-        """Record what is needed from the customer. Writes no rows."""
-        _ops.note_case(db, case_id=case_id, state="needs_information",
-                       detail=question)
+        """Record what is needed from the customer. Writes no rows. The
+        question must state what is missing and cannot be empty."""
+        try:
+            _ops.note_case(db, case_id=case_id, state="needs_information",
+                           detail=question)
+        except _ops.OperationError as exc:
+            return _err(str(exc))
         return _ok(state="needs_information")
+
+    @tool
+    @neatlogs.span(kind="TOOL", tool_name="escalate_without_exchange")
+    def escalate_without_exchange(reason: str, attempt: int = 1) -> str:
+        """Escalate when no exchange was started (no stock to release).
+        For partial state with a held unit, use escalate_to_human."""
+        key = _key(ctx, "escalate", attempt)
+        try:
+            res = _ops.record_escalation(db, case_id=case_id, run_id=run_id,
+                                         op_key=key, reason=reason)
+        except (_ops.TransientError,) as exc:
+            return _err(str(exc), retry_same_key=True, op_key=key)
+        except _ops.OperationError as exc:
+            return _err(str(exc), op_key=key)
+        return _ok(exchange_id=res.exchange_id, status=res.status,
+                   duplicate=res.duplicate, op_key=key)
 
     return [get_order, get_return_policy, find_exchange_stock,
             get_active_exchange, get_operation_status, verify_exchange,
             reserve_replacement, create_return, create_label,
             finalize_arranged, escalate_to_human, cancel_exchange,
-            record_denial, record_clarification]
+            record_denial, record_clarification, escalate_without_exchange]

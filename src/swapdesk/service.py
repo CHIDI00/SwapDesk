@@ -198,7 +198,7 @@ def _run_flow(db_path, *, case_id: str, run_id: str, order_id: str,
             db_path, case_id=case_id, run_id=run_id,
             op_key=_key("reserve"), order_id=order_id,
             order_item_id=order_item_id, size=authorized, qty=qty,
-            requested_size=size))
+            requested_size=size, consent=authorized != size))
     except _Exhausted as exc:
         return {**_escalate_none(
             db_path, case_id, f"reservation kept failing: {exc}"),

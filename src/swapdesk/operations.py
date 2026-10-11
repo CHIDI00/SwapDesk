@@ -27,6 +27,7 @@ from .models import (
     TERMINAL_EXCHANGE_STATUSES,
     ExchangeHandoff,
     ExchangeRecord,
+    EscalationResult,
     FinalizeResult,
     LabelResult,
     Order,
@@ -203,7 +204,8 @@ def _write_op(conn: sqlite3.Connection, saved: sqlite3.Row | None, *,
 
 
 def _touch_case(conn: sqlite3.Connection, case_id: str, state: str,
-                step: str | None = None) -> None:
+                step: str | None = None,
+                note: str | None = None) -> None:
     """Persist case progress in the same transaction as the business write."""
     if state not in CASE_STATES:
         raise OperationError(f"unknown case state {state!r}")
@@ -214,6 +216,9 @@ def _touch_case(conn: sqlite3.Connection, case_id: str, state: str,
     steps = progress.setdefault("steps", [])
     if step is not None and step not in steps:
         steps.append(step)
+    if note is not None:
+        progress.setdefault("notes", []).append(
+            {"state": state, "detail": note, "at": _db.utcnow()})
     now = _db.utcnow()
     conn.execute(
         """INSERT INTO cases (case_id, state, progress_json, updated_at)
@@ -284,12 +289,15 @@ def _transition(conn: sqlite3.Connection, *, exchange_id: str, to_status: str,
 def reserve_replacement(db_path: str | Path, *, case_id: str, run_id: str,
                         op_key: str, order_id: str, order_item_id: str,
                         size: str, qty: int = 1,
-                        requested_size: str | None = None) -> ReservationResult:
+                        requested_size: str | None = None,
+                        consent: bool = False) -> ReservationResult:
     """Reserve one replacement unit of the exact requested size.
 
     `size` is the authorized size (never substituted silently);
     `requested_size` records what the customer originally asked for and
-    defaults to `size`. Both join the idempotency payload.
+    defaults to `size`. Authorizing a different size requires explicit
+    recorded customer consent, otherwise this raises and writes nothing.
+    All three join the idempotency payload.
 
     Idempotent on op_key: same key plus same payload returns the saved
     result; same key plus different payload raises PayloadMismatchError.
@@ -301,8 +309,13 @@ def reserve_replacement(db_path: str | Path, *, case_id: str, run_id: str,
         raise ReservationError("qty must be at least 1")
     if requested_size is None:
         requested_size = size
+    if requested_size != size and not consent:
+        raise ReservationError(
+            f"size {size!r} differs from requested {requested_size!r} "
+            "without recorded customer consent; refusing to substitute")
     payload = {"order_id": order_id, "order_item_id": order_item_id,
-               "size": size, "qty": qty, "requested_size": requested_size}
+               "size": size, "qty": qty, "requested_size": requested_size,
+               "consent": consent}
     digest = payload_hash(payload)
     conn = _db.connect(db_path)
     try:
@@ -409,7 +422,11 @@ def reserve_replacement(db_path: str | Path, *, case_id: str, run_id: str,
                       "order_item_id": order_item_id,
                       "sku": item.sku, "size": size, "qty": qty,
                       "requested_size": requested_size})
-            _touch_case(conn, case_id, "replacement_reserved", step="reserved")
+            _touch_case(conn, case_id, "replacement_reserved",
+                        step="reserved",
+                        note=(f"consent:{size}"
+                              if requested_size != size and consent
+                              else None))
             fresh = ReservationResult(exchange_id=exchange_id,
                                       status="replacement_reserved",
                                       duplicate=False)
@@ -801,14 +818,54 @@ def escalate_case(db_path: str | Path, *, case_id: str, run_id: str,
         op_type=OP_ESCALATE)
 
 
+def record_escalation(db_path: str | Path, *, case_id: str, run_id: str,
+                      op_key: str, reason: str) -> EscalationResult:
+    """Escalate with no exchange started: nothing to release, handoff only.
+
+    Idempotent on op_key with a journaled record, exactly like any other
+    op. For partial state with a held unit, use escalate_case instead.
+    """
+    if not reason or not reason.strip():
+        raise OperationError("escalation requires a recorded reason")
+    payload = {"exchange_id": None, "reason": reason}
+    digest = payload_hash(payload)
+    conn = _db.connect(db_path)
+    try:
+        with _db.immediate(conn):
+            saved = _load_saved(conn, op_key, digest)
+            if saved is not None:
+                return EscalationResult(exchange_id=None,
+                                        status="escalated", duplicate=True)
+            result = {"exchange_id": None, "status": "escalated",
+                      "duplicate": False}
+            _record_op(conn, op_key=op_key, case_id=case_id, run_id=run_id,
+                       op_type=OP_ESCALATE, digest=digest, payload=payload,
+                       status="committed", result=result)
+            _journal(conn, op_key, "escalated",
+                     {"exchange_id": None, "reason": reason})
+            _touch_case(conn, case_id, "escalated", step="escalated",
+                        note=reason)
+            return EscalationResult(exchange_id=None, status="escalated",
+                                    duplicate=False)
+    finally:
+        conn.close()
+
+
 def note_case(db_path: str | Path, *, case_id: str, state: str,
               detail: str = "") -> dict:
     """Record case-level progress (received/needs_information/denied).
 
     Progress metadata only: no fulfillment effect, no idempotency key.
+    Terminal-facing states (denied, needs_information, escalated)
+    require a non-empty detail so handoffs are never blank.
     """
     if state not in CASE_STATES:
         raise OperationError(f"unknown case state {state!r}")
+    if state in ("denied", "needs_information", "escalated"
+                 ) and not detail.strip():
+        raise OperationError(
+            f"state {state!r} requires a non-empty detail; "
+            "quote the observed fact (ids, sizes, policy phrase)")
     conn = _db.connect(db_path)
     try:
         with _db.immediate(conn):

@@ -136,6 +136,13 @@ class ReleaseResult:
 
 
 @dataclass(frozen=True)
+class EscalationResult:
+    exchange_id: str | None
+    status: str
+    duplicate: bool
+
+
+@dataclass(frozen=True)
 class ExchangeHandoff:
     """Read-only recovery handoff. Inspect, then act with the matching op."""
     exchange_id: str
