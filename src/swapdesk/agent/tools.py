@@ -13,6 +13,7 @@ can never mint one by accident after an uncertain write.
 from __future__ import annotations
 
 import json
+import re
 from dataclasses import dataclass
 from datetime import date
 from pathlib import Path
@@ -62,6 +63,13 @@ _STOCK_CLAIM_PHRASES = (
     "0 unit",
 )
 
+# Negated availability with up to three words in between: "not
+# available", "not currently available", "isn't available". Catches the
+# live false claim of 2026-10-11 without blocking unrelated questions.
+_NOT_AVAILABLE_RE = re.compile(
+    r"\bnot(\s+\w+){0,3}\s+available\b"
+    r"|\bn['\u2019]t(\s+\w+){0,3}\s+available\b")
+
 
 def _claims_unavailable(question: str) -> bool:
     """True only when the question asserts the size cannot be supplied.
@@ -70,6 +78,8 @@ def _claims_unavailable(question: str) -> bool:
     recorded while inventory happens to be available.
     """
     lowered = (question or "").lower()
+    if _NOT_AVAILABLE_RE.search(lowered):
+        return True
     return any(phrase in lowered for phrase in _STOCK_CLAIM_PHRASES)
 
 

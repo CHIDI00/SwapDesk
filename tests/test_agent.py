@@ -177,6 +177,26 @@ def test_clarification_cannot_claim_available_structured_stock(shop):
     assert get_case(shop, "AG-STOCK-CLARIFY") is None
 
 
+def test_clarification_rejects_not_currently_available_claim(shop):
+    """Live 2026-10-11 wording slipped past the out-of-stock phrasing."""
+    from swapdesk.agent.tools import ToolContext, build_tools
+    from swapdesk.operations import get_case
+
+    clarify = next(tool for tool in build_tools(ToolContext(
+        db_path=shop, case_id="AG-STOCK-CLARIFY-2", run_id="RUN-1",
+        order_id="ORD-1001", order_item_id="ITEM-01",
+        requested_size="42", qty=1))
+        if tool.name == "record_clarification")
+    result = json.loads(clarify.invoke({
+        "question": "Size 42 of AIRFLOW-RUNNER is not currently available. "
+                    "Would you like to accept a different size, or would "
+                    "you prefer to wait for stock?"}))
+
+    assert result["ok"] is False
+    assert "10 unit(s) available" in result["error"]
+    assert get_case(shop, "AG-STOCK-CLARIFY-2") is None
+
+
 def test_agent_loop_is_bounded(shop):
     from langgraph.errors import GraphRecursionError
 
