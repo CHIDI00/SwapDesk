@@ -66,6 +66,7 @@ def test_agent_ticket_runs_and_resumes_checkpointed_conversation(
     from langchain_core.messages import AIMessage
 
     from swapdesk import service
+    from swapdesk import worker as _worker
     from swapdesk.agent.graph import run_agent as execute_agent
     from swapdesk.agent.scripted import ScriptedChatModel, call
 
@@ -86,45 +87,59 @@ def test_agent_ticket_runs_and_resumes_checkpointed_conversation(
         AIMessage(content="Done."),
     ])
 
-    def run_scripted(ctx, checkpointer=None):
+    def run_scripted(ctx, checkpointer=None, **kwargs):
         return execute_agent(ctx, model=model, checkpointer=checkpointer)
 
     monkeypatch.setattr(service, "run_agent", run_scripted)
     first = client.post("/v1/agent/tickets", json={
         "case_id": "API-AGENT-1", "message": "I need an exchange"})
-    assert first.status_code == 201, first.text
-    assert first.json()["outcome"] == "clarification"
-    assert first.json()["resumed"] is False
+    assert first.status_code == 202, first.text
+    assert first.json()["run_id"] == "RUN-1"
+    assert first.json()["execution_status"] == "queued"
+    assert first.json()["status_url"] == "/v1/agent/cases/API-AGENT-1"
 
-    resumed = client.post("/v1/agent/tickets", json={
-        "case_id": "API-AGENT-1", "resume": True,
+    assert _worker.drain_once(
+        __import__("os").environ["SWAPDESK_DB"]) is True
+    waiting = client.get("/v1/agent/cases/API-AGENT-1").json()
+    assert waiting["execution_status"] == "waiting_input"
+    assert waiting["outcome"] == "clarification"
+
+    cont = client.post("/v1/agent/cases/API-AGENT-1/continue", json={
         "message": "Please exchange item ITEM-01 for size 42",
-        "order_id": "ORD-1001", "order_item_id": "ITEM-01",
-        "size": "42"})
-    assert resumed.status_code == 201, resumed.text
-    assert resumed.json()["outcome"] == "arranged"
-    assert resumed.json()["resumed"] is True
-    assert resumed.json()["run_id"] == first.json()["run_id"]
-    assert "TRK-MOCK-" in resumed.json()["reply"]
+        "order_id": "ORD-1001", "order_item_id": "ITEM-01", "size": "42"})
+    assert cont.status_code == 202, cont.text
+    assert cont.json()["run_id"] == "RUN-2"
+    assert _worker.drain_once(
+        __import__("os").environ["SWAPDESK_DB"]) is True
 
-    timeline = client.get("/v1/cases/API-AGENT-1/timeline").json()
+    done = client.get("/v1/agent/cases/API-AGENT-1").json()
+    assert done["execution_status"] == "completed"
+    assert done["outcome"] == "arranged"
+    assert done["runs"] == ["RUN-1", "RUN-2"]
+    assert "TRK-MOCK-" in done["reply"]
+
+    timeline = client.get("/v1/agent/cases/API-AGENT-1/timeline").json()
     assert [event["event"] for event in timeline] == [
         "reserved", "return_created", "label_created", "arranged"]
+    assert all(event["run_id"] == "RUN-2" for event in timeline)
 
 
-def test_agent_ticket_without_provider_returns_service_unavailable(
+def test_agent_ticket_without_provider_fails_loudly(
         client, monkeypatch):
-    from swapdesk import service
-    from swapdesk.agent.graph import ConfigurationError
+    from swapdesk import worker as _worker
 
-    def unconfigured(*args, **kwargs):
-        raise ConfigurationError("provider unavailable")
-
-    monkeypatch.setattr(service, "run_agent", unconfigured)
-    response = client.post("/v1/agent/tickets", json={
+    monkeypatch.delenv("LITELLM_API_KEY", raising=False)
+    monkeypatch.delenv("GEMINI_API_KEY", raising=False)
+    monkeypatch.delenv("SWAPDESK_MODEL", raising=False)
+    accepted = client.post("/v1/agent/tickets", json={
         "case_id": "API-AGENT-NOCONFIG", "message": "exchange my shoes"})
-    assert response.status_code == 503
-    assert response.json() == {"detail": "agent is not configured"}
+    assert accepted.status_code == 202
+    assert _worker.drain_once(
+        __import__("os").environ["SWAPDESK_DB"]) is True
+    status = client.get("/v1/agent/cases/API-AGENT-NOCONFIG").json()
+    assert status["execution_status"] == "failed"
+    assert status["outcome"] is None
+    assert status["error"]
 
 
 def test_agent_ticket_can_resume_after_failure_before_first_write(
@@ -132,6 +147,7 @@ def test_agent_ticket_can_resume_after_failure_before_first_write(
     from langchain_core.messages import AIMessage
 
     from swapdesk import service
+    from swapdesk import worker as _worker
     from swapdesk.agent.graph import run_agent as execute_agent
     from swapdesk.agent.scripted import ScriptedChatModel, call
 
@@ -143,7 +159,7 @@ def test_agent_ticket_can_resume_after_failure_before_first_write(
     ])
     calls = 0
 
-    def fail_once(ctx, checkpointer=None):
+    def fail_once(ctx, checkpointer=None, **kwargs):
         nonlocal calls
         calls += 1
         if calls == 1:
@@ -153,15 +169,21 @@ def test_agent_ticket_can_resume_after_failure_before_first_write(
     monkeypatch.setattr(service, "run_agent", fail_once)
     first = client.post("/v1/agent/tickets", json={
         "case_id": "API-AGENT-EARLY-FAIL", "message": "I need an exchange"})
-    assert first.status_code == 502
-    assert first.json()["case_id"] == "API-AGENT-EARLY-FAIL"
+    assert first.status_code == 202
+    assert _worker.drain_once(
+        __import__("os").environ["SWAPDESK_DB"]) is True
+    failed = client.get("/v1/agent/cases/API-AGENT-EARLY-FAIL").json()
+    assert failed["execution_status"] == "failed"
 
-    resumed = client.post("/v1/agent/tickets", json={
-        "case_id": "API-AGENT-EARLY-FAIL", "resume": True,
-        "message": "I need an exchange"})
-    assert resumed.status_code == 201, resumed.text
-    assert resumed.json()["outcome"] == "clarification"
-    assert resumed.json()["resumed"] is True
+    cont = client.post("/v1/agent/cases/API-AGENT-EARLY-FAIL/continue",
+                       json={"message": "I need an exchange"})
+    assert cont.status_code == 202, cont.text
+    assert cont.json()["run_id"] == "RUN-2"
+    assert _worker.drain_once(
+        __import__("os").environ["SWAPDESK_DB"]) is True
+    waiting = client.get("/v1/agent/cases/API-AGENT-EARLY-FAIL").json()
+    assert waiting["execution_status"] == "waiting_input"
+    assert waiting["outcome"] == "clarification"
 
 
 def test_denial_and_clarification_are_200_outcomes(client):
@@ -248,7 +270,22 @@ def test_unknown_case_and_validation(client):
     assert no_request.status_code == 422
 
 
-def test_demo_fault_recovery_and_controls(client):
+def test_demo_faults_disabled_by_default(client, monkeypatch):
+    assert client.post("/v1/demo/faults", json={
+        "case_id": "X", "run_id": "RUN-1",
+        "step": "reserve", "point": "transient"}).status_code == 403
+    assert client.delete("/v1/demo/faults").status_code == 403
+
+    monkeypatch.setenv("SWAPDESK_ENABLE_DEMO_FAULTS", "1")
+    armed = client.post("/v1/demo/faults", json={
+        "case_id": "GATED", "run_id": "RUN-1",
+        "step": "reserve", "point": "transient"})
+    assert armed.json()["armed"] is True
+    assert client.delete("/v1/demo/faults").json() == {"cleared": True}
+
+
+def test_demo_fault_recovery_and_controls(client, monkeypatch):
+    monkeypatch.setenv("SWAPDESK_ENABLE_DEMO_FAULTS", "1")
     armed = client.post("/v1/demo/faults", json={
         "case_id": "DEMO-API", "run_id": "RUN-1",
         "step": "reserve", "point": "transient", "times": 2})
@@ -276,11 +313,17 @@ def test_demo_fault_recovery_and_controls(client):
 def test_openapi_matches_implementation(client):
     doc = client.get("/openapi.json").json()
     paths = doc["paths"]
-    for route in ("/v1/health", "/v1/tickets", "/v1/cases/{case_id}",
+    for route in ("/v1/health", "/v1/tickets", "/v1/agent/tickets",
+                  "/v1/cases/{case_id}",
                   "/v1/cases/{case_id}/timeline",
-                  "/v1/cases/{case_id}/continue", "/v1/fixtures",
+                  "/v1/cases/{case_id}/continue",
+                  "/v1/agent/cases/{case_id}",
+                  "/v1/agent/cases/{case_id}/timeline",
+                  "/v1/agent/cases/{case_id}/continue",
+                  "/v1/fixtures",
                   "/v1/demo/faults"):
         assert route in paths, route
+    assert paths["/v1/agent/tickets"]["post"]["responses"]["202"]
     ticket_fields = paths["/v1/tickets"]["post"]["requestBody"][
         "content"]["application/json"]["schema"]
     assert ticket_fields["$ref"].endswith("TicketIn")

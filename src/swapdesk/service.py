@@ -21,6 +21,7 @@ from . import faults as _faults
 from .agent.graph import (
     AgentContext,
     ConfigurationError,
+    DEFAULT_MAX_TOOL_CALLS,
     derive_outcome,
     run_agent,
     sqlite_checkpointer,
@@ -304,15 +305,24 @@ def submit_agent_ticket(db_path, *, message: str,
                         size: str | None = None, qty: int = 1,
                         consent_size: str | None = None,
                         case_id: str | None = None,
-                        resume: bool = False) -> dict:
-    """Run a natural-language ticket through the checkpointed LangGraph agent."""
+                        resume: bool = False,
+                        run_id: str = "RUN-1",
+                        model=None, middleware=(),
+                        max_tool_calls: int = DEFAULT_MAX_TOOL_CALLS,
+                        ) -> dict:
+    """Run a natural-language ticket through the checkpointed LangGraph agent.
+
+    The single agent execution implementation: queue workers call this per
+    claimed run with the run's saved request. Optional model/middleware
+    exist for offline doubles and provider-request budgets; production
+    uses the configured provider with no silent fallback.
+    """
     ensure_db(db_path)
     cid = case_id or f"CASE-{uuid.uuid4().hex[:8]}"
     exists = get_case(db_path, cid) is not None
     if exists and not resume:
         raise ValueError(f"case {cid!r} already exists; set resume=true")
 
-    run_id = "RUN-1"
     fields = {key: value for key, value in {
         "order_id": order_id, "order_item_id": order_item_id,
         "size": size, "qty": qty,
@@ -331,7 +341,9 @@ def submit_agent_ticket(db_path, *, message: str,
     checkpoint_path = Path(f"{db_path}.agent-checkpoints.sqlite")
     try:
         with sqlite_checkpointer(checkpoint_path) as checkpointer:
-            result = run_agent(ctx, checkpointer=checkpointer)
+            result = run_agent(ctx, model=model, checkpointer=checkpointer,
+                               max_tool_calls=max_tool_calls,
+                               middleware=middleware)
     except ConfigurationError:
         raise
     except Exception as exc:
