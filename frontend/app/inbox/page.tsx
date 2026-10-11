@@ -20,7 +20,7 @@ const tickets = [
 export default function InboxPage() {
   return (
     <AppShell crumbs={[{ label: "SwapDesk", to: "/" }, { label: "Inbox" }]}>
-      <PageTitle title="Inbox" sub="128 tickets today · 96% resolved autonomously" />
+      <PageTitle title="Inbox" sub="Sample tickets resolved autonomously by the SwapDesk agent" />
       <div className="panel divide-y divide-hairline overflow-hidden">
         {tickets.map((t) => (
           <Link

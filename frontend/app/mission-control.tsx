@@ -17,45 +17,48 @@ import {
 import { AppShell } from "@/components/AppShell";
 import { useSwapDesk, type TicketStatus } from "@/store/swapdesk";
 
-const metrics = [
-  {
-    label: "Completion Rate",
-    value: "96%",
-    detail: "Recoverable cases",
-    icon: Check,
-    tone: "green",
-    footnote: "↑ 4.2% this week",
-  },
-  {
-    label: "Duplicate-Action Rate",
-    value: "0%",
-    detail: "Down from 40% in V1",
-    icon: RotateCcw,
-    tone: "green",
-    footnote: "Idempotency verified",
-  },
-  {
-    label: "Wrongful-Action Rate",
-    value: "0%",
-    detail: "Safety under policy",
-    icon: ShieldCheck,
-    tone: "green",
-    footnote: "Policy checks active",
-  },
-  {
-    label: "Cost per Case",
-    value: "$0.24",
-    detail: "Avg Bedrock token cost",
-    icon: CircleDollarSign,
-    tone: "neutral",
-    footnote: "−12% vs. last week",
-  },
-] as const;
-
 export function MissionControl() {
   const { tickets } = useSwapDesk();
   const [filter, setFilter] = useState<"all" | TicketStatus>("all");
   const visibleTickets = tickets.filter((ticket) => filter === "all" || ticket.status === filter);
+
+  const totalTickets = tickets.length;
+  const resolvedTickets = tickets.filter((ticket) => ticket.status === "resolved").length;
+  const completionRate =
+    totalTickets > 0 ? `${Math.round((resolvedTickets / totalTickets) * 100)}%` : "N/A";
+
+  const metrics = [
+    {
+      label: "Completion Rate",
+      value: completionRate,
+      detail: "Resolved by the agent",
+      icon: Check,
+      tone: "green",
+      footnote: "From the live mock queue",
+    },
+    {
+      label: "Duplicate-Action Rate",
+      value: "0%",
+      icon: RotateCcw,
+      tone: "green",
+      footnote: "Idempotency verified",
+    },
+    {
+      label: "Wrongful-Action Rate",
+      value: "0%",
+      detail: "Safety under policy",
+      icon: ShieldCheck,
+      tone: "green",
+      footnote: "Policy checks active",
+    },
+    {
+      label: "Cost per execution",
+      value: "Demo Mode",
+      detail: "No backend billed",
+      icon: CircleDollarSign,
+      tone: "neutral",
+    },
+  ];
 
   return (
     <AppShell crumbs={[{ label: "SwapDesk", to: "/" }, { label: "Mission Control" }]} metrics={false}>
@@ -69,7 +72,7 @@ export function MissionControl() {
               <h1 className="font-display text-3xl font-semibold tracking-tight sm:text-4xl">Mission Control</h1>
               <span className="inline-flex items-center gap-2 rounded-full border border-success/20 bg-success/[0.07] px-3 py-1.5 font-mono text-[11px] text-success">
                 <span className="pulse-dot h-1.5 w-1.5 rounded-full bg-success shadow-[0_0_10px_var(--color-success)]" />
-                Live: V2 Production
+                Live: Local Demo
               </span>
             </div>
             <p className="mt-2 text-sm text-muted-foreground">
@@ -192,7 +195,7 @@ export function MissionControl() {
           </div>
           <div className="mt-4 flex items-center justify-between border-t border-hairline pt-4">
             <span className="font-mono text-[10px] text-muted-foreground/75">
-              SHOWING {visibleTickets.length.toString().padStart(2, "0")} OF 128 EXECUTIONS
+              SHOWING {visibleTickets.length.toString().padStart(2, "0")} OF {totalTickets.toString().padStart(2, "0")} EXECUTIONS
             </span>
             <Link href="/inbox" className="group inline-flex items-center gap-1.5 text-xs text-muted-foreground transition hover:text-foreground">
               Open full inbox

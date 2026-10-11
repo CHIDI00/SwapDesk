@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { Inbox, Boxes, Database, Settings, Plug, Ticket, ChevronRight, Zap } from "lucide-react";
 import type { ReactNode } from "react";
+import { useSwapDesk } from "@/store/swapdesk";
 
 const nav = [
   { to: "/", label: "Inbox", icon: Inbox },
@@ -16,8 +17,14 @@ const nav = [
 export function AppShell({ crumbs, children, metrics = true }: { crumbs: { label: string; to?: string }[]; children: ReactNode; metrics?: boolean }) {
   const pathname = usePathname();
   const router = useRouter();
+  const { tickets } = useSwapDesk();
 
   const isActive = (to: string) => pathname === to;
+
+  const totalTickets = tickets.length;
+  const resolvedTickets = tickets.filter((ticket) => ticket.status === "resolved").length;
+  const completionRate =
+    totalTickets > 0 ? `${Math.round((resolvedTickets / totalTickets) * 100)}%` : "N/A";
 
   const handleSimulateTicket = () => {
     router.push("/simulate");
@@ -82,8 +89,8 @@ export function AppShell({ crumbs, children, metrics = true }: { crumbs: { label
               </button>
               {metrics && (
                 <div className="grid grid-cols-2 gap-2 sm:flex sm:gap-3">
-                  <Metric label="Completion Rate" value="96%" tone="success" />
-                  <Metric label="Cost per Case" value="$0.24" />
+                  <Metric label="Completion Rate" value={completionRate} tone="success" />
+                  <Metric label="Cost per execution" value="Demo Mode" />
                 </div>
               )}
             </div>
