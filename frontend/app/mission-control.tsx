@@ -233,7 +233,7 @@ export function MissionControl() {
               >
                 <option value="all">All</option>
                 <option value="active">Active</option>
-                <option value="needs-input">Needs input</option>
+                <option value="needs-input">Action required</option>
                 <option value="done">Done</option>
                 <option value="failed">Failed</option>
               </select>

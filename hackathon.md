@@ -21,6 +21,17 @@ Contact details shared in chat are withheld from this public log.
 
 ## Build log
 
+### 2026-10-11 - MIT license confirmed
+
+Completed:
+
+- `LICENSE` verified MIT (SwapDesk contributors, 2026). `README.md` License section already points to it. `pyproject.toml` carries no license field; no change needed for submission.
+- Outstanding license item closed; history entries noting "unchosen" left intact.
+
+Tests run: none (docs only).
+
+Failures: none.
+
 ### 2026-10-11 - README and submission docs finalized (no slice language)
 
 Completed:
@@ -308,4 +319,4 @@ Pending. No URL.
 
 ## Submission
 
-Confirmed: nothing submitted. Outstanding: video (3 min or less, all three tools), X quote-post, cutoff Oct 12 7:00–11:55 PM IST, license choice, team publication names. Nothing published, deployed, or submitted.
+Confirmed: nothing submitted. Outstanding: video (3 min or less, all three tools), X quote-post, cutoff Oct 12 7:00–11:55 PM IST, team publication names. License: MIT done. Nothing published, deployed, or submitted.

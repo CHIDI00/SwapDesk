@@ -13,7 +13,7 @@ const nav = [
   { to: "/", label: "Mission Control", icon: LayoutDashboard },
   { to: "/inbox", label: "Inbox", icon: Inbox },
   { to: "/inventory", label: "Inventory", icon: Boxes },
-  { to: "/needs-input", label: "Needs input", icon: MessageCircleQuestion },
+  { to: "/needs-input", label: "Action Required", icon: MessageCircleQuestion },
   { to: "/settings", label: "Settings", icon: Settings },
 ] as const;
 
