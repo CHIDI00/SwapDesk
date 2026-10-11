@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Bricolage_Grotesque, Geist_Mono, Plus_Jakarta_Sans } from "next/font/google";
+import Script from "next/script";
 import { Toaster } from "sonner";
 import { SwapDeskProvider } from "@/store/swapdesk";
 import {
@@ -71,13 +72,18 @@ export const metadata: Metadata = {
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
-  colorScheme: "dark",
+  colorScheme: "light dark",
   themeColor: "#0a0a0b",
 };
+
+const themeInitScript = `(function(){try{var t=localStorage.getItem("swapdesk-theme");document.documentElement.classList.toggle("light",t==="light")}catch(e){}})();`;
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" className={`${jakartaSans.variable} ${bricolage.variable} ${geistMono.variable} h-full antialiased`}>
+      <Script id="theme-init" strategy="beforeInteractive">
+        {themeInitScript}
+      </Script>
       <body className="min-h-full flex flex-col">
         <SwapDeskProvider>
           {children}

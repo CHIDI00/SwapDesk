@@ -167,7 +167,7 @@ export function MissionControl() {
                   <p className="text-xs font-medium text-muted-foreground">{label}</p>
                   <p className="num mt-4 text-4xl font-semibold tracking-tight">{value}</p>
                 </div>
-                <span className="grid h-9 w-9 place-items-center rounded-xl border border-hairline bg-white/[0.025] text-muted-foreground">
+                  <span className="grid h-9 w-9 place-items-center rounded-xl border border-hairline bg-[var(--surface)] text-muted-foreground">
                   <Icon className="h-4 w-4" />
                 </span>
               </div>
@@ -188,7 +188,7 @@ export function MissionControl() {
                   <span className="text-foreground/85">{row.label}</span>
                   <span className="num font-mono text-muted-foreground">{row.count}</span>
                 </div>
-                <div className="h-1.5 overflow-hidden rounded-full bg-white/[0.04]">
+                <div className="h-1.5 overflow-hidden rounded-full bg-[var(--surface-strong)]">
                   <div className={`h-full rounded-full ${row.tone}`} style={{ width: `${Math.round((row.count / outcomeMax) * 100)}%` }} />
                 </div>
               </div>
@@ -205,7 +205,7 @@ export function MissionControl() {
                   <span className="text-foreground/85">{row.label}</span>
                   <span className="num font-mono text-muted-foreground">{row.count}</span>
                 </div>
-                <div className="h-1.5 overflow-hidden rounded-full bg-white/[0.04]">
+                <div className="h-1.5 overflow-hidden rounded-full bg-[var(--surface-strong)]">
                   <div className="h-full rounded-full bg-primary/70" style={{ width: `${Math.round((row.count / execMax) * 100)}%` }} />
                 </div>
               </div>

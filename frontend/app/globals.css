@@ -66,11 +66,62 @@
   --danger: oklch(0.63 0.22 20);
   --hairline: oklch(1 0 0 / 8%);
   --glass: oklch(0.2 0.005 286 / 55%);
+  --surface: oklch(1 0 0 / 2.5%);
+  --surface-strong: oklch(1 0 0 / 4%);
+  --surface-hover: oklch(1 0 0 / 6%);
+  --nav-bg: #0b0b0d;
+  --panel-top: oklch(0.19 0.004 286 / 90%);
+  --panel-bottom: oklch(0.17 0.004 286 / 90%);
+  --panel-shadow:
+    inset 0 1px 0 oklch(1 0 0 / 4%),
+    0 20px 50px -30px oklch(0 0 0 / 80%);
   --glow-success: 0 0 0 1px oklch(0.84 0.2 152 / 35%), 0 8px 40px -8px oklch(0.84 0.2 152 / 55%);
   --glow-warning: 0 0 24px -6px oklch(0.8 0.16 75 / 50%);
   --gradient-ambient:
     radial-gradient(60rem 30rem at 85% -10%, oklch(0.84 0.2 152 / 9%), transparent 60%),
     radial-gradient(40rem 25rem at -10% 110%, oklch(0.8 0.16 75 / 6%), transparent 60%);
+}
+
+html.light {
+  color-scheme: light;
+  --background: #f5f6f8;
+  --foreground: #16171b;
+  --card: #ffffff;
+  --card-foreground: #16171b;
+  --popover: #ffffff;
+  --popover-foreground: #16171b;
+  --primary: oklch(0.62 0.17 152);
+  --primary-foreground: oklch(0.99 0.01 152);
+  --secondary: oklch(0.94 0.004 286);
+  --secondary-foreground: oklch(0.25 0.006 286);
+  --muted: oklch(0.95 0.004 286);
+  --muted-foreground: oklch(0.46 0.012 286);
+  --accent: oklch(0.93 0.006 286);
+  --accent-foreground: oklch(0.2 0.006 286);
+  --destructive: oklch(0.58 0.21 25);
+  --destructive-foreground: #ffffff;
+  --border: #e3e4e8;
+  --input: #e3e4e8;
+  --ring: oklch(0.62 0.17 152 / 40%);
+  --success: oklch(0.58 0.16 152);
+  --warning: oklch(0.64 0.14 68);
+  --danger: oklch(0.58 0.21 25);
+  --hairline: oklch(0 0 0 / 8%);
+  --glass: oklch(1 0 0 / 72%);
+  --surface: oklch(0 0 0 / 3%);
+  --surface-strong: oklch(0 0 0 / 5%);
+  --surface-hover: oklch(0 0 0 / 7%);
+  --nav-bg: #ffffff;
+  --panel-top: oklch(1 0 0 / 92%);
+  --panel-bottom: oklch(0.985 0.002 286 / 92%);
+  --panel-shadow:
+    inset 0 1px 0 oklch(1 0 0 / 90%),
+    0 20px 50px -34px oklch(0.35 0.02 286 / 40%);
+  --glow-success: 0 0 0 1px oklch(0.62 0.17 152 / 25%), 0 8px 40px -10px oklch(0.62 0.17 152 / 35%);
+  --glow-warning: 0 0 24px -8px oklch(0.64 0.14 68 / 40%);
+  --gradient-ambient:
+    radial-gradient(60rem 30rem at 85% -10%, oklch(0.62 0.17 152 / 10%), transparent 60%),
+    radial-gradient(40rem 25rem at -10% 110%, oklch(0.64 0.14 68 / 8%), transparent 60%);
 }
 
 @layer base {
@@ -109,12 +160,10 @@
 }
 
 @utility panel {
-  background: linear-gradient(180deg, oklch(0.19 0.004 286 / 90%), oklch(0.17 0.004 286 / 90%));
+  background: linear-gradient(180deg, var(--panel-top), var(--panel-bottom));
   border: 1px solid var(--hairline);
   border-radius: var(--radius-2xl);
-  box-shadow:
-    inset 0 1px 0 oklch(1 0 0 / 4%),
-    0 20px 50px -30px oklch(0 0 0 / 80%);
+  box-shadow: var(--panel-shadow);
 }
 
 @utility glow-success {

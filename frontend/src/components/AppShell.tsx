@@ -7,6 +7,7 @@ import { Inbox, Boxes, Settings, Ticket, ChevronRight, Zap, LayoutDashboard, Pan
 import type { ReactNode } from "react";
 import { useSwapDesk } from "@/store/swapdesk";
 import { API_BASE } from "@/lib/api";
+import { ThemeToggle } from "@/components/ThemeToggle";
 
 const nav = [
   { to: "/", label: "Mission Control", icon: LayoutDashboard },
@@ -101,6 +102,7 @@ export function AppShell({ crumbs, children, metrics = true }: { crumbs: { label
           </Link>
         ))}
         <div className="mt-auto flex flex-col items-center gap-2">
+          <ThemeToggle expanded={expanded} />
           <BackendStatus expanded={expanded} />
           <button
             type="button"
@@ -156,7 +158,7 @@ export function AppShell({ crumbs, children, metrics = true }: { crumbs: { label
       {/* Mobile bottom nav */}
       <nav
         aria-label="Main navigation"
-        className="fixed inset-x-0 bottom-0 z-40 grid grid-cols-6 border-t border-hairline bg-[#0b0b0d] px-3 pb-[calc(env(safe-area-inset-bottom)+0.6rem)] pt-2.5 shadow-[0_-16px_40px_-24px_rgba(0,0,0,0.95)] md:hidden"
+        className="fixed inset-x-0 bottom-0 z-40 grid grid-cols-6 border-t border-hairline bg-[var(--nav-bg)] px-3 pb-[calc(env(safe-area-inset-bottom)+0.6rem)] pt-2.5 shadow-[0_-16px_40px_-24px_rgba(0,0,0,0.95)] md:hidden"
       >
         {nav.map(({ to, label, icon: Icon }) => {
           const active = isActive(to);
@@ -170,7 +172,7 @@ export function AppShell({ crumbs, children, metrics = true }: { crumbs: { label
               <span
                 className={`grid h-8 w-[4.25rem] place-items-center rounded-full transition-all duration-200 ${active
                     ? "bg-primary/[0.12] text-primary shadow-[inset_0_0_0_1px_rgba(91,255,159,0.22),0_0_18px_-4px_rgba(91,255,159,0.35)]"
-                    : "text-muted-foreground group-hover:text-foreground group-active:bg-white/[0.06]"
+                    : "text-muted-foreground group-hover:text-foreground group-active:bg-[var(--surface-hover)]"
                   }`}
               >
                 <Icon className="h-5 w-5" />
