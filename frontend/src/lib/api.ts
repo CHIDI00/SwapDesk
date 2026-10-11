@@ -1,14 +1,29 @@
 /**
  * Typed client for the SwapDesk agent backend (docs/API_CONTRACT.md).
  *
- * Only the public base URL is configurable, via NEXT_PUBLIC_SWAPDESK_API
- * (default http://127.0.0.1:8000). No secrets ever live in browser code:
- * this backend has no auth. Every call is single-shot — no retries here.
+ * Only the base URL is configurable, via NEXT_PUBLIC_SWAPDESK_API
+ * (default https://swapdesk-7yvl.onrender.com). No secrets ever live in
+ * browser code: this backend has no auth. Every call is single-shot —
+ * no retries here.
  */
 
 export const API_BASE =
   process.env.NEXT_PUBLIC_SWAPDESK_API?.replace(/\/$/, "") ??
-  "http://127.0.0.1:8000";
+  "https://swapdesk-7yvl.onrender.com";
+
+export type HealthOut = {
+  ok: boolean;
+  service: string;
+};
+
+export type ReadyOut = {
+  ok: boolean;
+  service: string;
+  queued_depth: number;
+  oldest_queued_age_s: number | null;
+  last_terminal_at: string | null;
+  note: string;
+};
 
 export type ExecutionStatus =
   | "queued"
@@ -123,6 +138,14 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
     throw new ApiError(res.status, detail);
   }
   return (await res.json()) as T;
+}
+
+export function getHealth(): Promise<HealthOut> {
+  return request<HealthOut>("/v1/health");
+}
+
+export function getReady(): Promise<ReadyOut> {
+  return request<ReadyOut>("/v1/ready");
 }
 
 export function submitTicket(body: {

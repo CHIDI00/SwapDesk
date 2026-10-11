@@ -38,6 +38,9 @@ export function MissionControl() {
     total,
     loading,
     error,
+    health,
+    ready,
+    refreshStatus,
     executionFilter,
     setExecutionFilter,
     hasMore,
@@ -46,6 +49,10 @@ export function MissionControl() {
   } = useSwapDesk();
   const [filter, setFilter] = useState<Filter>("all");
   const visibleTickets = cases.filter((ticket) => matchesFilter(ticket, filter));
+
+  const queuedDepth = ready?.queued_depth ?? 0;
+  const backendLabel =
+    health === "online" ? "Backend online" : health === "offline" ? "Backend offline" : "Checking…";
 
   const execCounts = summary?.execution_status ?? {};
   const outcomeCounts = summary?.outcome ?? {};
@@ -94,6 +101,30 @@ export function MissionControl() {
             </p>
           </div>
           <div className="flex items-center gap-2">
+            <span
+              className={`inline-flex items-center gap-2 rounded-lg border px-3 py-2 text-xs ${
+                health === "offline"
+                  ? "border-warning/25 bg-warning/[0.06] text-warning"
+                  : "border-success/20 bg-success/[0.06] text-success"
+              }`}
+              title={ready?.note ?? backendLabel}
+            >
+              <span
+                className={`h-1.5 w-1.5 rounded-full ${
+                  health === "online"
+                    ? "bg-success pulse-dot"
+                    : health === "offline"
+                      ? "bg-warning"
+                      : "bg-muted-foreground"
+                }`}
+              />
+              {backendLabel}
+              {health === "online" && (
+                <span className="font-mono text-[10px] text-muted-foreground">
+                  Queue {queuedDepth}
+                </span>
+              )}
+            </span>
             <select
               aria-label="Filter by execution status"
               className="cursor-pointer appearance-none rounded-lg border border-hairline bg-card/80 px-3 py-2 text-xs text-foreground outline-none"
@@ -109,7 +140,10 @@ export function MissionControl() {
             </select>
             <button
               type="button"
-              onClick={() => void refresh()}
+              onClick={() => {
+                void refresh();
+                void refreshStatus();
+              }}
               className="inline-flex items-center gap-2 rounded-lg border border-hairline bg-card/65 px-3 py-2 text-xs text-muted-foreground transition-colors hover:bg-accent/60"
             >
               <Clock3 className="h-3.5 w-3.5" />

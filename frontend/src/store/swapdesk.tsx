@@ -11,14 +11,19 @@ import {
   type ReactNode,
 } from "react";
 import {
+  getHealth,
+  getReady,
   listCases,
   submitTicket,
   type AcceptResponse,
   type AgentCase,
   type CaseList,
+  type ReadyOut,
 } from "@/lib/api";
 
 export type { AgentCase, AcceptResponse };
+
+export type HealthState = "unknown" | "online" | "offline";
 
 type SwapDeskContextValue = {
   cases: AgentCase[];
@@ -26,6 +31,9 @@ type SwapDeskContextValue = {
   total: number;
   loading: boolean;
   error: string | null;
+  health: HealthState;
+  ready: ReadyOut | null;
+  refreshStatus: () => Promise<void>;
   executionFilter: string;
   setExecutionFilter: (value: string) => void;
   refresh: () => Promise<void>;
@@ -52,6 +60,8 @@ export function SwapDeskProvider({ children }: { children: ReactNode }) {
   const [cursor, setCursor] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [health, setHealth] = useState<HealthState>("unknown");
+  const [ready, setReady] = useState<ReadyOut | null>(null);
   const [executionFilter, setExecutionFilter] = useState("");
   const requestId = useRef(0);
 
@@ -100,6 +110,17 @@ export function SwapDeskProvider({ children }: { children: ReactNode }) {
     [fetchPage],
   );
 
+  const refreshStatus = useCallback(async () => {
+    try {
+      const [healthResult, readyResult] = await Promise.all([getHealth(), getReady()]);
+      setHealth(healthResult.ok ? "online" : "offline");
+      setReady(readyResult);
+    } catch {
+      setHealth("offline");
+      setReady(null);
+    }
+  }, []);
+
   const submit = useCallback(
     async (body: {
       message: string;
@@ -127,7 +148,8 @@ export function SwapDeskProvider({ children }: { children: ReactNode }) {
     // Initial load on mount; guarded by request id.
     // eslint-disable-next-line react-hooks/set-state-in-effect
     void fetchPage("", null, false);
-  }, [fetchPage]);
+    void refreshStatus();
+  }, [fetchPage, refreshStatus]);
 
   // Status polling only: refresh the shared list while any visible case
   // is still queued or running. Never resubmits anything.
@@ -147,6 +169,9 @@ export function SwapDeskProvider({ children }: { children: ReactNode }) {
       total,
       loading,
       error,
+      health,
+      ready,
+      refreshStatus,
       executionFilter,
       setExecutionFilter: changeFilter,
       refresh,
@@ -154,7 +179,7 @@ export function SwapDeskProvider({ children }: { children: ReactNode }) {
       hasMore: cursor !== null,
       submit,
     }),
-    [cases, summary, total, loading, error, executionFilter, changeFilter, refresh, loadMore, cursor, submit],
+    [cases, summary, total, loading, error, health, ready, refreshStatus, executionFilter, changeFilter, refresh, loadMore, cursor, submit],
   );
 
   return <SwapDeskContext.Provider value={value}>{children}</SwapDeskContext.Provider>;
