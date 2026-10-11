@@ -75,9 +75,17 @@ def maybe_wrap_provider(client):
     except Exception:
         ChatOpenAI = None
     supported = tuple(c for c in (ChatGoogleGenerativeAI, ChatOpenAI)
-                      if c is not None)
+                       if c is not None)
     if supported and isinstance(client, supported):
-        return neatlogs.wrap(client, surface="swapdesk-agent")
+        try:
+            return neatlogs.wrap(client, surface="swapdesk-agent")
+        except TypeError:
+            # neatlogs.wrap() matches concrete client classes by name.
+            # Subclasses carrying their own explicit spans (e.g.
+            # InstrumentedChatOpenAI on the LiteLLM-proxy path) are not
+            # matched; the explicit spans already cover that path, so
+            # return the client unwrapped rather than failing.
+            return client
     return client
 
 

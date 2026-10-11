@@ -130,6 +130,16 @@ executed. Per-case `requests_spent` (client-counted, persisted) is the
 primary usage record; neatlogs token/cost fields are secondary and may
 be absent — absent fields are reported as missing, never filled in.
 
+Update 2026-10-11 (telemetry gap closed): the LiteLLM-proxy client now
+emits one explicit LLM span per generation (`src/swapdesk/agent/
+model_spans.py`, wired in `build_model`), recording model, sanitized
+input/output, latency, returned usage when present (omitted when
+absent), and error type on failure. `neatlogs.wrap()` was verified to
+match only concrete client classes and cannot cover this subclass, so
+`maybe_wrap_provider` returns it unwrapped with explicit spans as the
+single counting point. Offline proofs: `tests/test_model_spans.py`
+(fake provider through the real adapter, no network).
+
 ## Spend-control limitations (known, accepted)
 
 - An in-flight request at the timeout instant cannot be cancelled and

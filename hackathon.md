@@ -21,6 +21,19 @@ Contact details shared in chat are withheld from this public log.
 
 ## Build log
 
+### 2026-10-11 - Explicit model spans for the LiteLLM-proxy path
+
+Completed:
+
+- Locked-SDK audit (neatlogs 1.4.26): `wrap()` documents raw OpenAI clients only; LangChain `ChatOpenAI` fell into the generic `openai`-module branch whose patches never fire on langchain's own HTTP layer. That explains the boot-check trace (`608bd91b…`) recording `llm_calls: 0` despite a completed run. No auto-capture exists for this path.
+- New `src/swapdesk/agent/model_spans.py`: `InstrumentedChatOpenAI` emits exactly one explicit LLM span per generation (`_generate`/`_agenerate`/`_stream`/`_astream`), with model name, sanitized input/output (credential patterns scrubbed, 4k truncation), latency, provider-returned usage when present and omitted when absent (unknown, never zero), and error type with re-raise. Wired into the LiteLLM branch of `build_model`; Gemini path untouched.
+- `telemetry.maybe_wrap_provider` now returns wrap-unsupported subclasses unwrapped instead of raising `TypeError` (explicit spans are the single counting point there). Found via the existing `test_wrap_covers_openai_client` failing honestly after the wiring; fixed same session.
+- New `tests/test_model_spans.py` (7 tests, fake provider through the real adapter, zero network, ~2s): one-span-per-generation with preserved usage, unknown-not-zero omission, error recording plus re-raise, secret scrubbing, single streaming span, instrumented client construction, and real-SDK acceptance of the span shape.
+
+Tests run: `uv run pytest tests/test_model_spans.py tests/test_provider.py -q` (12 passed); full `uv run pytest -q` (134 passed, 1 skipped), locked `uv` environment, no paid calls.
+
+Failures: one regression same session (`test_wrap_covers_openai_client` → `TypeError` from `wrap()` name matching on the new subclass), fixed by documented unwrapped return.
+
 ### 2026-10-11 - Reconciled async agent queue on the existing agent service path
 
 Completed:

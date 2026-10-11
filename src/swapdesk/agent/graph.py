@@ -74,9 +74,9 @@ def build_model(model_id: str | None = None):
     """
     telemetry.load_dotenv()
     if "LITELLM_API_KEY" in os.environ:
-        from langchain_openai import ChatOpenAI
+        from .model_spans import InstrumentedChatOpenAI
 
-        return ChatOpenAI(
+        return InstrumentedChatOpenAI(
             model=model_id or os.environ.get("SWAPDESK_MODEL")
             or LITELLM_DEFAULT_MODEL_ID,
             base_url=os.environ.get("LITELLM_BASE_URL",
