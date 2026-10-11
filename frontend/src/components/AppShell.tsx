@@ -17,14 +17,13 @@ const nav = [
 export function AppShell({ crumbs, children, metrics = true }: { crumbs: { label: string; to?: string }[]; children: ReactNode; metrics?: boolean }) {
   const pathname = usePathname();
   const router = useRouter();
-  const { tickets } = useSwapDesk();
+  const { summary, total } = useSwapDesk();
 
   const isActive = (to: string) => pathname === to;
 
-  const totalTickets = tickets.length;
-  const resolvedTickets = tickets.filter((ticket) => ticket.status === "resolved").length;
+  const arranged = summary?.outcome.arranged ?? 0;
   const completionRate =
-    totalTickets > 0 ? `${Math.round((resolvedTickets / totalTickets) * 100)}%` : "N/A";
+    total > 0 ? `${Math.round((arranged / total) * 100)}%` : "N/A";
 
   const handleSimulateTicket = () => {
     router.push("/simulate");
@@ -82,7 +81,7 @@ export function AppShell({ crumbs, children, metrics = true }: { crumbs: { label
                 type="button"
                 onClick={handleSimulateTicket}
                 className="inline-flex shrink-0 items-center gap-2 rounded-lg border border-hairline bg-card/60 px-3 py-2 text-xs font-medium text-foreground transition-colors hover:bg-accent/60"
-                title="Open a new customer ticket"
+                title="Submit a ticket to the agent backend"
               >
                 <Zap className="h-3.5 w-3.5 text-success" />
                 New Ticket
@@ -90,7 +89,7 @@ export function AppShell({ crumbs, children, metrics = true }: { crumbs: { label
               {metrics && (
                 <div className="grid grid-cols-2 gap-2 sm:flex sm:gap-3">
                   <Metric label="Completion Rate" value={completionRate} tone="success" />
-                  <Metric label="Cost per execution" value="$0.00" />
+                  <Metric label="Cost per execution" value="Demo Mode" />
                 </div>
               )}
             </div>
