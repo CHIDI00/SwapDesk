@@ -62,17 +62,17 @@ uv run uvicorn swapdesk.api:app
 
 Interactive docs at `http://127.0.0.1:8000/docs` (generated from the implementation, always in sync). The demo database is `swapdesk.db` (override with `SWAPDESK_DB`); restarting reuses it, fixtures seed once.
 
-| Method & route | What it does |
-|---|---|
-| `POST /v1/tickets` | Submit a ticket and run it to a verified outcome (201) |
-| `POST /v1/agent/tickets` | Run natural-language input through the checkpointed LangGraph agent (201) |
-| `GET /v1/cases/{id}` | Verified status, outcome, reply, run ids (404 unknown) |
-| `GET /v1/cases/{id}/timeline` | Sanitized action/journal events (404 unknown) |
-| `POST /v1/cases/{id}/continue` | Continue with message/consent (404 unknown, 422 uncontinuable) |
-| `GET /v1/fixtures` | Synthetic orders, items, and policy for dropdowns |
-| `POST /v1/demo/faults` | Demo-only: arm one failure on an operation key |
-| `DELETE /v1/demo/faults` | Demo-only: disarm all failures |
-| `GET /v1/health` | Liveness probe |
+| Method & route                 | What it does                                                              |
+| ------------------------------ | ------------------------------------------------------------------------- |
+| `POST /v1/tickets`             | Submit a ticket and run it to a verified outcome (201)                    |
+| `POST /v1/agent/tickets`       | Run natural-language input through the checkpointed LangGraph agent (201) |
+| `GET /v1/cases/{id}`           | Verified status, outcome, reply, run ids (404 unknown)                    |
+| `GET /v1/cases/{id}/timeline`  | Sanitized action/journal events (404 unknown)                             |
+| `POST /v1/cases/{id}/continue` | Continue with message/consent (404 unknown, 422 uncontinuable)            |
+| `GET /v1/fixtures`             | Synthetic orders, items, and policy for dropdowns                         |
+| `POST /v1/demo/faults`         | Demo-only: arm one failure on an operation key                            |
+| `DELETE /v1/demo/faults`       | Demo-only: disarm all failures                                            |
+| `GET /v1/health`               | Liveness probe                                                            |
 
 Outcomes (`arranged`, `clarification`, `denial`, `escalation`) are response data, not transport errors. Ticket creation routes return 201 with an `outcome`; case status reads return 200. Malformed requests return 422, unknown cases 404, an unconfigured agent 503, and an agent execution failure 502 with the case identity needed to retry.
 
@@ -140,16 +140,16 @@ Other scripts: `npm run build` (production build), `npm run start`, `npm run lin
 
 ### Pages and demo flow
 
-| Route | Page | What it demos |
-|---|---|---|
-| `/` | Mission Control | Agent metrics + live execution queue |
-| `/inbox` | Inbox | Sample ticket stream |
-| `/inventory` | Inventory | Stock levels that react to simulations |
-| `/database` | Database Schema | Tables the agent reads/writes |
-| `/integrations` | Integrations | Inbound webhook triggers (Zendesk, Shopify, Gorgias) |
-| `/settings` | Agent Settings | Autonomy/guardrail config UI |
-| `/simulate` | Customer Simulation | Inject a customer complaint into the queue |
-| `/ticket/[id]` | Ticket Execution | Per-ticket action timeline |
+| Route           | Page                | What it demos                                        |
+| --------------- | ------------------- | ---------------------------------------------------- |
+| `/`             | Mission Control     | Agent metrics + live execution queue                 |
+| `/inbox`        | Inbox               | Sample ticket stream                                 |
+| `/inventory`    | Inventory           | Stock levels that react to simulations               |
+| `/database`     | Database Schema     | Tables the agent reads/writes                        |
+| `/integrations` | Integrations        | Inbound webhook triggers (Zendesk, Shopify, Gorgias) |
+| `/settings`     | Agent Settings      | Autonomy/guardrail config UI                         |
+| `/simulate`     | Customer Simulation | Inject a customer complaint into the queue           |
+| `/ticket/[id]`  | Ticket Execution    | Per-ticket action timeline                           |
 
 The demo runs entirely on a client-side store (`frontend/src/store/swapdesk.tsx`). **Simulate Ticket** prepends a resolved ticket and decrements `AJ4-MIL-43` stock; **Customer Simulation** injects a ticket with an `Agent Processing` status; **Reset Mock Data** (inventory page) restores the initial state. Dashboard labels reflect the actual mock state — completion rate is computed from the queue, and cost shows "Demo Mode".
 
@@ -165,13 +165,13 @@ SEO is configured across all routes (per-page metadata, generated Open Graph/Twi
 
 ## Documentation
 
-| Doc | Purpose |
-|---|---|
-| [`docs/build-plan.md`](docs/build-plan.md) | Full build plan (spec, not evidence) |
-| [`docs/STUDIO_VERIFICATION.md`](docs/STUDIO_VERIFICATION.md) | LangGraph Studio runbook with evidence |
-| [`docs/EVIDENCE_RUNNER_HARNESS.md`](docs/EVIDENCE_RUNNER_HARNESS.md) | Runner/harness evidence walk-through |
-| [`docs/business/`](docs/business/) | Business plan (MD/PDF) and financial model (XLSX) — figures are assumptions, not observed facts |
-| [`hackathon.md`](hackathon.md) | Slice-by-slice build log and conventions |
+| Doc                                                                  | Purpose                                                                                         |
+| -------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------- |
+| [`docs/build-plan.md`](docs/build-plan.md)                           | Full build plan (spec, not evidence)                                                            |
+| [`docs/STUDIO_VERIFICATION.md`](docs/STUDIO_VERIFICATION.md)         | LangGraph Studio runbook with evidence                                                          |
+| [`docs/EVIDENCE_RUNNER_HARNESS.md`](docs/EVIDENCE_RUNNER_HARNESS.md) | Runner/harness evidence walk-through                                                            |
+| [`docs/business/`](docs/business/)                                   | Business plan (MD/PDF) and financial model (XLSX) — figures are assumptions, not observed facts |
+| [`hackathon.md`](hackathon.md)                                       | Slice-by-slice build log and conventions                                                        |
 
 ## Contributing
 
