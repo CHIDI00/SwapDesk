@@ -164,7 +164,22 @@ export function MissionControl() {
         )}
 
         <section aria-label="Key indicators" className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-          {kpis.map(({ label, value, detail, icon: Icon }, index) => (
+          {loading && summary === null ? (
+            ["Total cases", "Completion Rate", "Active", "Failed"].map((label) => (
+              <article key={label} className="panel relative overflow-hidden p-5" aria-label={`${label} loading`}>
+                <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/[0.12] to-transparent" />
+                <div className="flex items-start justify-between gap-3">
+                  <div className="w-full">
+                    <p className="text-xs font-medium text-muted-foreground">{label}</p>
+                    <div className="mt-4 h-10 w-24 animate-pulse rounded-lg bg-white/[0.06]" />
+                  </div>
+                  <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl border border-hairline bg-white/[0.025]" />
+                </div>
+                <div className="mt-3 h-4 w-32 animate-pulse rounded bg-white/[0.06]" />
+              </article>
+            ))
+          ) : (
+            kpis.map(({ label, value, detail, icon: Icon }, index) => (
             <article key={label} className="panel rise relative overflow-hidden p-5" style={{ animationDelay: `${index * 60}ms` }}>
               <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/[0.12] to-transparent" />
               <div className="flex items-start justify-between gap-3">
@@ -178,7 +193,8 @@ export function MissionControl() {
               </div>
               <p className="mt-3 text-xs text-foreground/75">{detail}</p>
             </article>
-          ))}
+            ))
+          )}
         </section>
 
         <section className="grid gap-3 xl:grid-cols-2" aria-label="Distributions">
