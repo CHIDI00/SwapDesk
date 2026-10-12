@@ -114,7 +114,7 @@ export function AppShell({ crumbs, children }: { crumbs: { label: string; to?: s
 
       <div className={`flex min-w-0 flex-1 flex-col pb-[calc(5rem+env(safe-area-inset-bottom))] md:pb-0 ${expanded ? "md:ml-56" : "md:ml-20"}`}>
         <header className="glass sticky top-0 z-30 border-x-0 border-t-0">
-          <div className="flex flex-col gap-3 px-4 py-3 sm:px-6 lg:flex-row lg:items-center lg:justify-between lg:px-8 lg:py-4">
+          <div className="flex items-center justify-between gap-3 px-4 py-3 sm:px-6 lg:px-8 lg:py-4">
             <nav className="flex min-w-0 items-center gap-1.5 text-sm">
               {crumbs.map((c, i) => (
                 <span key={c.label} className="flex min-w-0 items-center gap-1.5">
