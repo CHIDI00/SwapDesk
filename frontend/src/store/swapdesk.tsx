@@ -49,6 +49,8 @@ type SwapDeskContextValue = {
     size?: string | null;
     qty?: number;
     consent_size?: string | null;
+    case_id?: string | null;
+    idempotency_key?: string | null;
   }) => Promise<AcceptResponse>;
 };
 
@@ -148,6 +150,8 @@ export function SwapDeskProvider({ children }: { children: ReactNode }) {
       size?: string | null;
       qty?: number;
       consent_size?: string | null;
+      case_id?: string | null;
+      idempotency_key?: string | null;
     }) => {
       const accepted = await submitTicket({
         message: body.message,
@@ -156,6 +160,8 @@ export function SwapDeskProvider({ children }: { children: ReactNode }) {
         size: body.size ?? null,
         qty: body.qty ?? 1,
         consent_size: body.consent_size ?? null,
+        case_id: body.case_id ?? null,
+        idempotency_key: body.idempotency_key ?? null,
       });
       await refresh();
       return accepted;

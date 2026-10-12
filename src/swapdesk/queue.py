@@ -281,8 +281,10 @@ def continue_agent_request(db_path, case_id: str, *, message: str = "",
             # Keep the whole conversation in the run input: each reply
             # appends to the stored thread instead of replacing it, so
             # the agent sees answered questions and stops re-asking.
+            # Always append: skipping "already seen" replies once
+            # discarded the original complaint on identical repeats.
             thread = (prior + "\n\nCustomer reply: " + reply).strip() \
-                if reply and prior and reply not in prior \
+                if reply and prior \
                 else (reply or prior)
             effective = {
                 "message": thread,

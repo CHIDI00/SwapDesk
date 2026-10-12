@@ -12,6 +12,7 @@ from __future__ import annotations
 import contextlib
 import json
 import os
+import re
 import sqlite3
 import uuid
 from datetime import date
@@ -299,6 +300,44 @@ class AgentExecutionError(Exception):
         super().__init__("agent execution failed")
 
 
+_NUMBER_WORDS = {
+    "one": 1, "two": 2, "three": 3, "four": 4, "five": 5,
+    "six": 6, "seven": 7, "eight": 8, "nine": 9, "ten": 10,
+}
+
+_ORDER_RE = re.compile(r"\bord(?:er)?[-\s#]*0*(\d{3,5})\b", re.IGNORECASE)
+_ITEM_RE = re.compile(r"\bitem[-\s#]*0*(\d{1,3})\b", re.IGNORECASE)
+_ITEM_WORD_RE = re.compile(
+    r"\bitem\s+(one|two|three|four|five|six|seven|eight|nine|ten)\b",
+    re.IGNORECASE)
+_SIZE_RE = re.compile(r"\bsize\s*0*(\d{1,3})\b", re.IGNORECASE)
+
+
+def _parse_identifiers(text: str) -> dict:
+    """Fill obvious free-text ids ("order 1001" -> ORD-1001).
+
+    Only used to fill structured fields the caller left blank; explicit
+    values are never overridden. Keyword-anchored so bare numbers never
+    match the wrong field.
+    """
+    found: dict = {}
+    order = _ORDER_RE.search(text or "")
+    if order:
+        found["order_id"] = f"ORD-{order.group(1)}"
+    item = _ITEM_RE.search(text or "")
+    if item:
+        found["order_item_id"] = f"ITEM-{int(item.group(1)):02d}"
+    else:
+        word = _ITEM_WORD_RE.search(text or "")
+        if word:
+            found["order_item_id"] = (
+                f"ITEM-{_NUMBER_WORDS[word.group(1).lower()]:02d}")
+    size = _SIZE_RE.search(text or "")
+    if size:
+        found["size"] = size.group(1)
+    return found
+
+
 def submit_agent_ticket(db_path, *, message: str,
                         order_id: str | None = None,
                         order_item_id: str | None = None,
@@ -323,6 +362,14 @@ def submit_agent_ticket(db_path, *, message: str,
     if exists and not resume:
         raise ValueError(f"case {cid!r} already exists; set resume=true")
 
+    if order_id is None or order_item_id is None or size is None:
+        parsed = _parse_identifiers(message)
+        if order_id is None:
+            order_id = parsed.get("order_id")
+        if order_item_id is None:
+            order_item_id = parsed.get("order_item_id")
+        if size is None:
+            size = parsed.get("size")
     fields = {key: value for key, value in {
         "order_id": order_id, "order_item_id": order_item_id,
         "size": size, "qty": qty,

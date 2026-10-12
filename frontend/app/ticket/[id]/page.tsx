@@ -6,6 +6,7 @@ import { useParams, useRouter } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
 import { useCaseDetail } from "@/lib/use-case";
+import { ApiError } from "@/lib/api";
 import { useSwapDesk } from "@/store/swapdesk";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { CaseDetail, TimelineEvent } from "@/lib/api";
@@ -60,6 +61,7 @@ function ContinueForm({ caseId, mode, onSent }: { caseId: string; mode: "answer"
   const { submit } = useSwapDesk();
   const router = useRouter();
   const [message, setMessage] = useState("");
+  const [consentSize, setConsentSize] = useState("");
   const [formError, setFormError] = useState<string | null>(null);
   const [starting, setStarting] = useState(false);
   const heading = mode === "answer" ? "Answer as the customer" : "Retry the run";
@@ -80,17 +82,26 @@ function ContinueForm({ caseId, mode, onSent }: { caseId: string; mode: "answer"
     try {
       await sendContinue({
         message: trimmedMessage,
-        consent_size: null,
+        consent_size: consentSize.trim() || null,
       });
       appendSentMessage(caseId, {
         text: trimmedMessage,
-        consent: null,
+        consent: consentSize.trim() || null,
         sentAt: Date.now(),
       });
       onSent();
       setMessage("");
+      setConsentSize("");
     } catch (err) {
-      setFormError(err instanceof Error ? err.message : "Continuation failed");
+      if (err instanceof ApiError && err.status === 409) {
+        setFormError("A run is still active for this case. Wait for the timeline to settle, then retry.");
+      } else if (err instanceof ApiError && err.status === 422) {
+        setFormError("That reply was empty. Write a message first.");
+      } else if (err instanceof ApiError && err.status === 0) {
+        setFormError("Service unreachable. Check the backend and retry.");
+      } else {
+        setFormError(err instanceof Error ? err.message : "Continuation failed");
+      }
     }
   };
 
@@ -124,6 +135,19 @@ function ContinueForm({ caseId, mode, onSent }: { caseId: string; mode: "answer"
           placeholder="Answer the agent's question…"
           disabled={sending}
           className="w-full resize-none rounded-xl border border-hairline bg-background/60 p-3 text-sm outline-none placeholder:text-muted-foreground/70 focus:border-success/40 disabled:opacity-60"
+        />
+      </div>
+      <div className="space-y-2">
+        <label htmlFor="continue-consent" className="block text-sm font-medium">
+          Consented size <span className="font-normal text-muted-foreground">(optional)</span>
+        </label>
+        <input
+          id="continue-consent"
+          value={consentSize}
+          onChange={(event) => setConsentSize(event.target.value)}
+          placeholder="43"
+          disabled={sending}
+          className="w-full rounded-xl border border-hairline bg-background/60 p-3 font-mono text-sm outline-none placeholder:text-muted-foreground/70 focus:border-success/40 disabled:opacity-60"
         />
       </div>
       {formError && <p className="text-sm text-warning">{formError}</p>}

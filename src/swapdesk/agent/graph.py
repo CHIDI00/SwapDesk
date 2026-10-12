@@ -19,7 +19,7 @@ from pathlib import Path
 import neatlogs
 
 from .. import telemetry
-from ..operations import get_case, note_case, verify_exchange
+from ..operations import get_case, note_case, record_escalation, verify_exchange
 from .prompts import (
     OUTCOME_ARRANGED,
     OUTCOME_CLARIFICATION,
@@ -134,6 +134,48 @@ def _latest_note(case: dict | None, state: str) -> str:
     return ""
 
 
+# At most two clarifying questions per case: a run that still cannot
+# proceed after two asks escalates instead of asking a third time.
+# Mirrors the advisory guard on the record_clarification tool, enforced
+# here on the outcome path where the model cannot dodge it.
+_MAX_CLARIFICATIONS = 2
+
+
+def _clarification_count(case: dict | None) -> int:
+    if not case:
+        return 0
+    return sum(
+        1 for note in case.get("progress", {}).get("notes", [])
+        if note.get("state") == "needs_information")
+
+
+def _run_index(run_id: str | None) -> int:
+    """1-based index of RUN-n; unparseable (e.g. status-read "") -> 1."""
+    try:
+        n = int(str(run_id or "").upper().replace("RUN-", ""))
+    except ValueError:
+        return 1
+    return n if n >= 1 else 1
+
+
+def _identifiers_complete(ctx: AgentContext) -> bool:
+    return bool(ctx.order_id and ctx.order_item_id and ctx.requested_size)
+
+
+def _persist_escalation(ctx: AgentContext, reason: str) -> dict:
+    """Escalate with no exchange started and persist the handoff.
+
+    Journaled and idempotent on the run's escalate key, exactly like the
+    escalate_without_exchange tool; the case lands in "escalated" so the
+    timeline shows the handoff instead of staying empty.
+    """
+    record_escalation(ctx.db_path, case_id=ctx.case_id, run_id=ctx.run_id,
+                      op_key=f"{ctx.case_id}:{ctx.run_id}:escalate",
+                      reason=reason)
+    return {"outcome": OUTCOME_ESCALATION, "exchange_id": None,
+            "data": {"reason": reason, "partial": "no exchange started"}}
+
+
 def _case_exchange(db_path, case_id: str):
     conn = sqlite3.connect(str(db_path))
     conn.row_factory = sqlite3.Row
@@ -211,8 +253,23 @@ def derive_outcome(ctx: AgentContext) -> dict:
         return {"outcome": OUTCOME_DENIAL, "exchange_id": None,
                 "data": {"reason": _latest_note(case, "denied")}}
     if state == "needs_information":
+        # Read-only: status reads re-derive with run_id="", so this branch
+        # never writes. The loop closes on run index: RUN-1 asks, RUN-2
+        # gets one answer attempt, a still-stuck RUN-3+ escalates. A
+        # tool-less RUN-2 that already holds complete identifiers
+        # escalates too: it had everything and committed nothing.
+        idx = _run_index(ctx.run_id)
+        stuck = idx >= 3 or (
+            idx >= 2 and (
+                _clarification_count(case) >= _MAX_CLARIFICATIONS
+                or _identifiers_complete(ctx)))
+        if stuck:
+            return _persist_escalation(
+                ctx, "two clarifications already requested without the "
+                     "needed information; bringing in a human specialist")
         return {"outcome": OUTCOME_CLARIFICATION, "exchange_id": None,
-                "data": {"question": _latest_note(case, "needs_information")}}
+                "data": {"question": _latest_note(
+                    case, "needs_information")}}
     if state in ("escalated", "cleanup_pending"):
         row = _case_exchange(ctx.db_path, ctx.case_id)
         if row is None:
@@ -249,14 +306,20 @@ def _escalate_no_progress(ctx: AgentContext) -> dict:
     """
     missing = _missing_identifiers(ctx)
     if missing:
+        # First ask. The write is deduped so repeat derivations (run
+        # result plus status-read verification) record one note, not one
+        # per read. The cap itself is enforced on the needs_information
+        # branch above, where the run index is known.
         question = f"provide {' and '.join(missing)}"
-        note_case(ctx.db_path, case_id=ctx.case_id,
-                  state="needs_information", detail=question)
+        case = get_case(ctx.db_path, ctx.case_id)
+        if _latest_note(case, "needs_information") != question:
+            note_case(ctx.db_path, case_id=ctx.case_id,
+                      state="needs_information", detail=question)
         return {"outcome": OUTCOME_CLARIFICATION, "exchange_id": None,
                 "data": {"question": question}}
-    return {"outcome": OUTCOME_ESCALATION, "exchange_id": None,
-            "data": {"reason": "agent made no progress",
-                     "partial": "identifiers present, no effect committed"}}
+    return _persist_escalation(
+        ctx, "agent made no progress: identifiers present, "
+             "no effect committed")
 
 
 def run_agent(ctx: AgentContext, model=None, checkpointer=None,

@@ -4,6 +4,7 @@ import { useState, type FormEvent } from "react";
 import Link from "next/link";
 import { ArrowRight, CheckCircle2, Loader2, Send } from "lucide-react";
 import { useSwapDesk } from "@/store/swapdesk";
+import { ApiError } from "@/lib/api";
 
 const DEFAULT_COMPLAINT = "My Jordan 4s arrived but are too tight. I need to exchange for a size 43.";
 
@@ -13,6 +14,7 @@ export function CustomerSimulationWidget() {
   const [orderId, setOrderId] = useState("");
   const [orderItemId, setOrderItemId] = useState("");
   const [size, setSize] = useState("");
+  const [idempotencyKey, setIdempotencyKey] = useState("");
   const [status, setStatus] = useState<"idle" | "routing" | "done" | "error">("idle");
   const [routedId, setRoutedId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -31,11 +33,20 @@ export function CustomerSimulationWidget() {
         order_id: orderId.trim() || null,
         order_item_id: orderItemId.trim() || null,
         size: size.trim() || null,
+        idempotency_key: idempotencyKey.trim() || null,
       });
       setRoutedId(accepted.case_id);
       setStatus("done");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Submission failed");
+      if (err instanceof ApiError && err.status === 409) {
+        setError("Submission conflict: this key was already used with a different payload. Change the text or the key.");
+      } else if (err instanceof ApiError && err.status === 422) {
+        setError("Validation failed: write a message first.");
+      } else if (err instanceof ApiError && err.status === 0) {
+        setError("Service unreachable. Check the backend and retry.");
+      } else {
+        setError(err instanceof Error ? err.message : "Submission failed");
+      }
       setStatus("error");
     }
   };
@@ -98,6 +109,20 @@ export function CustomerSimulationWidget() {
             className="w-full rounded-xl border border-hairline bg-background/60 p-3 font-mono text-sm outline-none placeholder:text-muted-foreground/70 focus:border-success/40 disabled:opacity-60"
           />
         </div>
+      </div>
+
+      <div className="space-y-2">
+        <label htmlFor="idempotency-key" className="block text-sm font-medium">
+          Idempotency key <span className="font-normal text-muted-foreground">(optional — reuse to test duplicates)</span>
+        </label>
+        <input
+          id="idempotency-key"
+          value={idempotencyKey}
+          onChange={(event) => setIdempotencyKey(event.target.value)}
+          placeholder="storefront-abc-123"
+          disabled={status === "routing"}
+          className="w-full rounded-xl border border-hairline bg-background/60 p-3 font-mono text-sm outline-none placeholder:text-muted-foreground/70 focus:border-success/40 disabled:opacity-60"
+        />
       </div>
 
       <button

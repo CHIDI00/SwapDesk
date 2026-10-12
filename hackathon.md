@@ -320,3 +320,25 @@ Pending. No URL.
 ## Submission
 
 Confirmed: nothing submitted. Outstanding: video (3 min or less, all three tools), X quote-post, cutoff Oct 12 7:00–11:55 PM IST, team publication names. License: MIT done. Nothing published, deployed, or submitted.
+
+## Clarification-loop fix (Oct 12, pre-demo)
+
+Symptom: CASE-bad5323d - 3 identical customer replies, same generic
+clarification every run (RUN-1..RUN-4, empty timeline). Root causes:
+derive_outcome re-ran on every status read and re-asked from the stale
+note with no bound; identical repeats collapsed the stored thread,
+dropping the original complaint; free-text ids (order 1001, item one)
+never became structured fields.
+Fix (8 files, contract untouched - same 202/422/404/409):
+backend agent/graph.py (cap on outcome path by run index, read-only
+needs_information branch, persisted escalation with timeline event),
+queue.py (always append replies, no substring collapse),
+service.py (keyword-anchored free-text id parsing: order/item/size);
+frontend lib/api.ts (typed continue responses), lib/use-case.ts
+(wider continue body), ticket/[id]/page.tsx (consent-size input,
+409/422/offline copy), CustomerSimulationWidget.tsx (409/422/offline
+copy, idempotency-key input), store/swapdesk.tsx (pass
+case_id/idempotency_key through).
+Verify: uv run pytest -q -> 146 passed, 1 skipped; offline loop repro ->
+RUN-1 clarification, RUN-2 escalation, further continue refused as
+terminal, thread preserved, verify-reads stable; npm run build clean.

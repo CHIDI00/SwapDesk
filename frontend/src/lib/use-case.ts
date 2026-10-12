@@ -78,7 +78,14 @@ export function useCaseDetail(caseId: string | undefined) {
   }, [active, load]);
 
   const sendContinue = useCallback(
-    async (body: { message?: string | null; consent_size?: string | null }) => {
+    async (body: {
+      message?: string | null;
+      consent_size?: string | null;
+      order_id?: string | null;
+      order_item_id?: string | null;
+      size?: string | null;
+      qty?: number;
+    }) => {
       if (!caseId) throw new Error("No case selected");
       setSending(true);
       try {

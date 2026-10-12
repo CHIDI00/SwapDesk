@@ -190,6 +190,26 @@ export function getTimeline(caseId: string): Promise<TimelineEvent[]> {
   );
 }
 
+export type ContinueQueued = {
+  case_id: string;
+  run_id: string;
+  execution_status: ExecutionStatus;
+  continued: true;
+  outcome: null;
+  reply: null;
+  exchange_id: null;
+};
+
+export type ContinueTerminal = {
+  case_id: string;
+  run_id: string | null;
+  execution_status: ExecutionStatus;
+  continued: false;
+  outcome: Exclude<Outcome, null>;
+  reply: string | null;
+  exchange_id: string | null;
+};
+
 export function continueCase(
   caseId: string,
   body: {
@@ -200,8 +220,8 @@ export function continueCase(
     size?: string | null;
     qty?: number;
   },
-): Promise<AcceptResponse | CaseDetail> {
-  return request<AcceptResponse | CaseDetail>(
+): Promise<ContinueQueued | ContinueTerminal> {
+  return request<ContinueQueued | ContinueTerminal>(
     `/v1/agent/cases/${encodeURIComponent(caseId)}/continue`,
     { method: "POST", body: JSON.stringify(body) },
   );
