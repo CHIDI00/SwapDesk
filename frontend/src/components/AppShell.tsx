@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { Inbox, Boxes, Settings, Ticket, ChevronRight, Zap, LayoutDashboard, PanelLeftClose, PanelLeftOpen, MessageCircleQuestion } from "lucide-react";
+import { Inbox, Boxes, Settings, Ticket, ChevronRight, Zap, LayoutDashboard, PanelLeftClose, PanelLeftOpen, MessageCircleQuestion, Webhook } from "lucide-react";
 import type { ReactNode } from "react";
 import { API_BASE } from "@/lib/api";
 import { ThemeToggle } from "@/components/ThemeToggle";
@@ -13,6 +13,7 @@ const nav = [
   { to: "/inbox", label: "Inbox", icon: Inbox },
   { to: "/inventory", label: "Inventory", icon: Boxes },
   { to: "/needs-input", label: "Action Required", icon: MessageCircleQuestion },
+  { to: "/integrations", label: "Integrations", icon: Webhook },
   { to: "/settings", label: "Settings", icon: Settings },
 ] as const;
 
