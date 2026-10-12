@@ -132,8 +132,8 @@ def test_agent_escalates_with_release(shop):
     out = run_agent(_ctx(shop, case="AG-4", run="RUN-AG4",
                          message="I want a human"), model=model)
     assert out["outcome"] == "escalation"
-    assert "customer asked for a human" in out["reply"]
-    assert "released" in out["reply"]
+    assert "human specialist" in out["reply"]
+    assert "released" not in out["reply"]
     assert _stock(shop, "AIRFLOW-RUNNER", "42") == (10, 0)
 
 
@@ -226,8 +226,22 @@ def test_agent_resumes_thread_without_double_effects(shop, tmp_path):
     assert len(second["messages"]) > len(first["messages"])
     # The resumed run wrote nothing: no case progress at all.
     assert second["outcome"] == "escalation"
-    assert "no progress" in second["reply"]
+    assert "human specialist" in second["reply"]
     assert _stock(shop, "AIRFLOW-RUNNER", "42") == (10, 0)
+
+
+def test_third_clarification_is_refused(shop):
+    from swapdesk.agent.tools import ToolContext, build_tools
+
+    ctx = ToolContext(db_path=shop, case_id="AG-CLARIFY-3", run_id="RUN-1")
+    (clarify,) = [t for t in build_tools(ctx)
+                  if t.name == "record_clarification"]
+    first = json.loads(clarify.invoke({"question": "which order?"}))
+    second = json.loads(clarify.invoke({"question": "which item?"}))
+    assert first["ok"] is True and second["ok"] is True
+    third = json.loads(clarify.invoke({"question": "which size?"}))
+    assert third["ok"] is False
+    assert "escalate" in third["error"]
 
 
 def test_agent_checkpoint_thread_is_scoped_to_case(shop, tmp_path):

@@ -290,7 +290,19 @@ def build_tools(ctx: ToolContext) -> list:
     @neatlogs.span(kind="TOOL", tool_name="record_clarification")
     def record_clarification(question: str) -> str:
         """Record what is needed from the customer. Writes no rows. The
-        question must state what is missing and cannot be empty."""
+        question must state what is missing and cannot be empty. At most
+        two clarifications per case: a third attempt is refused so the
+        agent escalates instead of interrogating the customer."""
+        asked = _ops.get_case(db, case_id)
+        prior = 0
+        if asked is not None:
+            prior = sum(
+                1 for note in asked.get("progress", {}).get("notes", [])
+                if note.get("state") == "needs_information")
+        if prior >= 2:
+            return _err(
+                "two clarifications already recorded for this case; "
+                "escalate instead of asking a third question")
         if (ctx.order_id and ctx.order_item_id and ctx.requested_size
                 and _claims_unavailable(question)):
             conn = _ops._db.connect(db)
