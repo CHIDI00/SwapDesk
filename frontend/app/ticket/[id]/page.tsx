@@ -104,7 +104,7 @@ function TicketDetailContent() {
         ) : (
           <div className="panel p-6">
             <p className="text-sm text-muted-foreground">
-              This ticket is not in the queue. It may have been cleared with “Reset Mock Data”. Simulate a ticket to see the
+              This ticket is not in the queue. It may have been cleared with “Reset Sample Data”. Submit a new ticket to see the
               execution view.
             </p>
           </div>

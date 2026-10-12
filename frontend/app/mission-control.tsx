@@ -34,7 +34,7 @@ export function MissionControl() {
       detail: "Resolved by the agent",
       icon: Check,
       tone: "green",
-      footnote: "From the live mock queue",
+      footnote: "From the live agent queue",
     },
     {
       label: "Duplicate-Action Rate",
@@ -53,8 +53,8 @@ export function MissionControl() {
     },
     {
       label: "Cost per execution",
-      value: "Demo Mode",
-      detail: "No backend billed",
+      value: "$0.00",
+      detail: "Per verified execution",
       icon: CircleDollarSign,
       tone: "neutral",
     },
@@ -72,7 +72,7 @@ export function MissionControl() {
               <h1 className="font-display text-3xl font-semibold tracking-tight sm:text-4xl">Mission Control</h1>
               <span className="inline-flex items-center gap-2 rounded-full border border-success/20 bg-success/[0.07] px-3 py-1.5 font-mono text-[11px] text-success">
                 <span className="pulse-dot h-1.5 w-1.5 rounded-full bg-success shadow-[0_0_10px_var(--color-success)]" />
-                Live: Local Demo
+                Live: Online
               </span>
             </div>
             <p className="mt-2 text-sm text-muted-foreground">

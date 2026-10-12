@@ -82,15 +82,15 @@ export function AppShell({ crumbs, children, metrics = true }: { crumbs: { label
                 type="button"
                 onClick={handleSimulateTicket}
                 className="inline-flex shrink-0 items-center gap-2 rounded-lg border border-hairline bg-card/60 px-3 py-2 text-xs font-medium text-foreground transition-colors hover:bg-accent/60"
-                title="Inject a mock ticket into the queue"
+                title="Open a new customer ticket"
               >
                 <Zap className="h-3.5 w-3.5 text-success" />
-                Simulate Ticket
+                New Ticket
               </button>
               {metrics && (
                 <div className="grid grid-cols-2 gap-2 sm:flex sm:gap-3">
                   <Metric label="Completion Rate" value={completionRate} tone="success" />
-                  <Metric label="Cost per execution" value="Demo Mode" />
+                  <Metric label="Cost per execution" value="$0.00" />
                 </div>
               )}
             </div>

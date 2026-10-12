@@ -18,10 +18,10 @@ export default function InventoryPage() {
             onClick={resetMockData}
             className="inline-flex shrink-0 items-center gap-2 rounded-lg border border-hairline bg-card/60 px-3 py-2 text-xs font-medium text-foreground transition-colors hover:bg-accent/60"
             title="Clear the ticket queue and restore inventory defaults"
-          >
-            <RotateCcw className="h-3.5 w-3.5" />
-            Reset Mock Data
-          </button>
+            >
+              <RotateCcw className="h-3.5 w-3.5" />
+              Reset Sample Data
+            </button>
         }
       />
       <div className="panel overflow-x-auto">
