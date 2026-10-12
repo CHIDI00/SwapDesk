@@ -24,12 +24,12 @@ from __future__ import annotations
 
 import os
 from pathlib import Path
-from typing import Any
+from typing import Annotated, Any
 
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, StringConstraints
 
 from . import queue, service
 from .operations import OperationError
@@ -61,7 +61,11 @@ class TicketOut(BaseModel):
 
 
 class AgentTicketIn(BaseModel):
-    message: str = Field(min_length=1, max_length=4000)
+    message: Annotated[
+        str,
+        StringConstraints(strip_whitespace=True, min_length=1,
+                          max_length=4000),
+    ]
     order_id: str | None = Field(default=None, max_length=96)
     order_item_id: str | None = Field(default=None, max_length=96)
     size: str | None = Field(default=None, max_length=32)
@@ -92,6 +96,7 @@ class AgentAccepted(BaseModel):
 
 class AgentStatusOut(BaseModel):
     case_id: str
+    message: str = ""
     execution_status: str
     outcome: str | None = None
     reply: str | None = None

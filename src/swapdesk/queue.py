@@ -409,8 +409,10 @@ def _public_status(db_path, conn, case_id: str) -> dict:
         exchange_id = last["exchange_id"]
         runs = [r["run_id"] for r in run_rows]
     clarification = reply if outcome == "clarification" else None
+    first_request = _case_first_request(conn, case_id)
     return {
         "case_id": case_id,
+        "message": _sanitize(first_request.get("message", "")),
         "execution_status": execution,
         "outcome": outcome,
         "reply": reply,

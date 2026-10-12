@@ -444,7 +444,7 @@ def test_status_reports_run_outcome_when_no_business_state(client):
     status = client.get("/v1/agent/cases/STATUS-STALL").json()
     assert status["execution_status"] == "completed"
     assert status["outcome"] == "escalation"
-    assert "no progress" in status["reply"]
+    assert "human specialist" in status["reply"]
     assert status["exchange_id"] is None
 
 

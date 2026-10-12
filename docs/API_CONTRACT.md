@@ -92,6 +92,7 @@ Errors: `422` validation, `409` key conflict.
 ```json
 {
   "case_id": "CASE-9f3a2c1b",
+  "message": "Please exchange ITEM-01 on order ORD-1001 for size 42",
   "execution_status": "completed",
   "outcome": "arranged",
   "reply": "Exchange arranged: return RET-EXC-ITEM-01-1 created, label LBL-EXC-ITEM-01-1 (TRK-MOCK-EXC-ITEM-01-1) ready. Reservation EXC-ITEM-01-1 verified.",

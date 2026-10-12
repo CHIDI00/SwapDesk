@@ -113,7 +113,7 @@ def test_list_filters_pagination_summary_and_agreement(client):
     for item in listed["items"]:
         detail = client.get(f"/v1/agent/cases/{item['case_id']}").json()
         for field in ("execution_status", "outcome", "current_run_id",
-                      "runs", "reply"):
+                      "runs", "reply", "message"):
             assert item[field] == detail[field], (item["case_id"], field)
         assert item["message"].startswith("ticket ")
         assert item["order_id"] == "ORD-1001"
@@ -162,7 +162,7 @@ def test_list_includes_escalation_without_business_state(client):
     match = [i for i in listed["items"] if i["case_id"] == "LIST-STALLED"]
     assert len(match) == 1
     assert match[0]["outcome"] == "escalation"
-    assert "no progress" in (match[0]["reply"] or "")
+    assert "human specialist" in (match[0]["reply"] or "")
     escalated = client.get("/v1/agent/cases?outcome=escalation").json()
     assert "LIST-STALLED" in [i["case_id"] for i in escalated["items"]]
 
