@@ -276,8 +276,16 @@ def continue_agent_request(db_path, case_id: str, *, message: str = "",
             if not isinstance(qty, int) or qty < 1:
                 raise ValueError("qty must be at least 1")
             base = _latest_request(conn, case_id)
+            reply = (message or "").strip()
+            prior = base.get("message", "")
+            # Keep the whole conversation in the run input: each reply
+            # appends to the stored thread instead of replacing it, so
+            # the agent sees answered questions and stops re-asking.
+            thread = (prior + "\n\nCustomer reply: " + reply).strip() \
+                if reply and prior and reply not in prior \
+                else (reply or prior)
             effective = {
-                "message": message.strip() or base.get("message", ""),
+                "message": thread,
                 "order_id": order_id if order_id is not None
                 else base.get("order_id"),
                 "order_item_id": order_item_id if order_item_id is not None
