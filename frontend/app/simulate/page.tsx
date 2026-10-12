@@ -11,7 +11,7 @@ export const metadata: Metadata = pageMetadata({
 
 export default function SimulatePage() {
   return (
-    <AppShell crumbs={[{ label: "SwapDesk", to: "/" }, { label: "Customer Simulation" }]} metrics={false}>
+    <AppShell crumbs={[{ label: "SwapDesk", to: "/" }, { label: "Customer Simulation" }]}>
       <div className="mx-auto w-full max-w-2xl">
         <PageTitle
           title="Customer Simulation"

@@ -14,7 +14,7 @@ const opts = [
 export default function SettingsPage() {
   const [on, setOn] = useState<Record<string, boolean>>({ auto: true, idem: true, verify: true, refund: false });
   return (
-    <AppShell crumbs={[{ label: "SwapDesk", to: "/" }, { label: "Settings" }]} metrics={false}>
+    <AppShell crumbs={[{ label: "SwapDesk", to: "/" }, { label: "Settings" }]}>
       <PageTitle title="Settings" sub="Guardrails for swapdesk-agent v2.4.1" />
       <div className="panel divide-y divide-hairline">
         {opts.map((o) => (

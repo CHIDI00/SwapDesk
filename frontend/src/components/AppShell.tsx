@@ -5,7 +5,6 @@ import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { Inbox, Boxes, Settings, Ticket, ChevronRight, Zap, LayoutDashboard, PanelLeftClose, PanelLeftOpen, MessageCircleQuestion } from "lucide-react";
 import type { ReactNode } from "react";
-import { useSwapDesk } from "@/store/swapdesk";
 import { API_BASE } from "@/lib/api";
 import { ThemeToggle } from "@/components/ThemeToggle";
 
@@ -59,15 +58,12 @@ function BackendStatus({ expanded }: { expanded: boolean }) {
   );
 }
 
-export function AppShell({ crumbs, children, metrics = true }: { crumbs: { label: string; to?: string }[]; children: ReactNode; metrics?: boolean }) {
+export function AppShell({ crumbs, children }: { crumbs: { label: string; to?: string }[]; children: ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
-  const { summary } = useSwapDesk();
   const [expanded, setExpanded] = useState(false);
 
   const isActive = (to: string) => pathname === to;
-
-  const completionRate = summary?.completion?.rate ?? "N/A";
 
   const handleSimulateTicket = () => {
     router.push("/simulate");
@@ -142,11 +138,6 @@ export function AppShell({ crumbs, children, metrics = true }: { crumbs: { label
                 <Zap className="h-3.5 w-3.5 text-success" />
                 New Ticket
               </button>
-              {metrics && (
-                <div className="grid grid-cols-2 gap-2 sm:flex sm:gap-3">
-                  <Metric label="Completion Rate" value={completionRate} tone="success" />
-                </div>
-              )}
             </div>
           </div>
         </header>
@@ -185,15 +176,6 @@ export function AppShell({ crumbs, children, metrics = true }: { crumbs: { label
           );
         })}
       </nav>
-    </div>
-  );
-}
-
-function Metric({ label, value, tone }: { label: string; value: string; tone?: "success" }) {
-  return (
-    <div className="flex min-w-0 items-center justify-between gap-3 rounded-xl border border-hairline bg-card/60 px-3 py-2 sm:justify-start">
-      <span className="truncate text-xs text-muted-foreground">{label}</span>
-      <span className={`num text-lg font-semibold ${tone === "success" ? "text-success" : "text-foreground"}`}>{value}</span>
     </div>
   );
 }

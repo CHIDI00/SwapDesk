@@ -60,15 +60,15 @@ export function MissionControl() {
 
   const execCounts = summary?.execution_status ?? {};
   const outcomeCounts = summary?.outcome ?? {};
-  const arrangedCount = outcomeCounts.arranged ?? 0;
   const failedCount = execCounts.failed ?? 0;
   const activeCount =
     (execCounts.queued ?? 0) + (execCounts.running ?? 0) + (execCounts.waiting_input ?? 0);
-  const completionRate = summary?.completion?.rate ?? "N/A";
+  const completion = summary?.completion ?? { arranged: 0, total: 0, rate: null };
+  const completionRate = completion.rate ?? "N/A";
 
   const kpis = [
     { label: "Total cases", value: `${total}`, detail: "Saved in this view", icon: Check },
-    { label: "Arranged rate", value: completionRate, detail: `${arrangedCount} arranged`, icon: Check },
+    { label: "Completion Rate", value: completionRate, detail: `${completion.total} cases, ${completion.arranged} completed`, icon: Check },
     { label: "Active", value: `${activeCount}`, detail: "Queued, running, or waiting", icon: Clock3 },
     { label: "Failed", value: `${failedCount}`, detail: "Ended in error", icon: ShieldAlert },
   ];
@@ -92,7 +92,7 @@ export function MissionControl() {
   const execMax = Math.max(1, ...execRows.map((r) => r.count));
 
   return (
-    <AppShell crumbs={[{ label: "SwapDesk", to: "/" }, { label: "Mission Control" }]} metrics={false}>
+    <AppShell crumbs={[{ label: "SwapDesk", to: "/" }, { label: "Mission Control" }]}>
       <div className="space-y-6 pb-8">
         <section className="flex flex-wrap items-end justify-between gap-4">
           <div>
