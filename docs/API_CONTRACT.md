@@ -233,6 +233,9 @@ from a previous `next_cursor`). Invalid values are `422`.
 ```
 
 `outcome: null` reads as `"pending"` in the outcome summary. The
+`summary` also carries `completion` (`arranged`, `total`, `rate` as a
+whole-percent string, `null` when `total` is 0) computed from the same
+resolver, so the displayed rate always agrees with list and detail. The
 customer `message` is credential-scrubbed before return.
 
 ## GET /v1/inventory → 200 (real stock)

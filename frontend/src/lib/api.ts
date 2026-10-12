@@ -63,6 +63,7 @@ export type CaseList = {
   summary: {
     execution_status: Record<string, number>;
     outcome: Record<string, number>;
+    completion?: { arranged: number; total: number; rate: string | null } | null;
   };
 };
 

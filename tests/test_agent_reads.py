@@ -97,13 +97,17 @@ def test_list_filters_pagination_summary_and_agreement(client):
     queued = client.get("/v1/agent/cases").json()
     assert queued["total"] == 3
     assert queued["summary"] == {"execution_status": {"queued": 3},
-                                 "outcome": {"pending": 3}}
+                                 "outcome": {"pending": 3},
+                                 "completion": {"arranged": 0, "total": 3,
+                                                "rate": "0%"}}
     assert queued["next_cursor"] is None  # single page
     _drain(_arrange_model)  # A arranges; B/C duplicate-reuse the exchange
     listed = client.get("/v1/agent/cases").json()
     assert listed["total"] == 3
     assert listed["summary"]["execution_status"] == {"completed": 3}
     assert listed["summary"]["outcome"] == {"arranged": 3}
+    assert listed["summary"]["completion"] == {"arranged": 3, "total": 3,
+                                               "rate": "100%"}
     assert len(listed["items"]) == 3
     # Detail agreement on every field the list exposes.
     for item in listed["items"]:
@@ -140,6 +144,13 @@ def test_list_filters_pagination_summary_and_agreement(client):
         if cursor is None:
             break
     assert sorted(seen) == ["LIST-A", "LIST-B", "LIST-C"]
+
+
+def test_completion_rate_empty_and_partial(client):
+    empty = client.get("/v1/agent/cases").json()
+    assert empty["total"] == 0
+    assert empty["summary"]["completion"] == {"arranged": 0, "total": 0,
+                                              "rate": None}
 
 
 def test_list_includes_escalation_without_business_state(client):

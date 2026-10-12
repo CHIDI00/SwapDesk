@@ -62,14 +62,12 @@ function BackendStatus({ expanded }: { expanded: boolean }) {
 export function AppShell({ crumbs, children, metrics = true }: { crumbs: { label: string; to?: string }[]; children: ReactNode; metrics?: boolean }) {
   const pathname = usePathname();
   const router = useRouter();
-  const { summary, total } = useSwapDesk();
+  const { summary } = useSwapDesk();
   const [expanded, setExpanded] = useState(false);
 
   const isActive = (to: string) => pathname === to;
 
-  const arranged = summary?.outcome.arranged ?? 0;
-  const completionRate =
-    total > 0 ? `${Math.round((arranged / total) * 100)}%` : "N/A";
+  const completionRate = summary?.completion?.rate ?? "N/A";
 
   const handleSimulateTicket = () => {
     router.push("/simulate");

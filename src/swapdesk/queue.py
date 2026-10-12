@@ -563,6 +563,13 @@ def list_agent_cases(db_path, *, execution: str | None = None,
             key = status["outcome"] if status["outcome"] is not None \
                 else "pending"
             obucket[key] = obucket.get(key, 0) + 1
+        arranged = summary["outcome"].get("arranged", 0)
+        summary["completion"] = {
+            "arranged": arranged,
+            "total": total,
+            "rate": f"{round(arranged / total * 100)}%"
+            if total > 0 else None,
+        }
         if after is not None:
             resolved = [r for r in resolved
                         if (r[0], r[1]) < (after[0], after[1])]

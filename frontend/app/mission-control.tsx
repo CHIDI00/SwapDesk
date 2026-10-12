@@ -64,7 +64,7 @@ export function MissionControl() {
   const failedCount = execCounts.failed ?? 0;
   const activeCount =
     (execCounts.queued ?? 0) + (execCounts.running ?? 0) + (execCounts.waiting_input ?? 0);
-  const completionRate = total > 0 ? `${Math.round((arrangedCount / total) * 100)}%` : "N/A";
+  const completionRate = summary?.completion?.rate ?? "N/A";
 
   const kpis = [
     { label: "Total cases", value: `${total}`, detail: "Saved in this view", icon: Check },
@@ -233,7 +233,7 @@ export function MissionControl() {
               >
                 <option value="all">All</option>
                 <option value="active">Active</option>
-                <option value="needs-input">Action required</option>
+                <option value="needs-input">Action Required</option>
                 <option value="done">Done</option>
                 <option value="failed">Failed</option>
               </select>
