@@ -442,9 +442,9 @@ def test_status_reports_run_outcome_when_no_business_state(client):
     stalled = ScriptedChatModel([AIMessage(content="nothing to do")])
     _drain(lambda: stalled)
     status = client.get("/v1/agent/cases/STATUS-STALL").json()
-    assert status["execution_status"] == "completed"
-    assert status["outcome"] == "escalation"
-    assert "human specialist" in status["reply"]
+    assert status["execution_status"] == "waiting_input"
+    assert status["outcome"] == "clarification"
+    assert "order number and item id" in status["reply"]
     assert status["exchange_id"] is None
 
 

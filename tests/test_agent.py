@@ -225,8 +225,10 @@ def test_agent_resumes_thread_without_double_effects(shop, tmp_path):
     assert "hello again" in second["messages"][-2].content
     assert len(second["messages"]) > len(first["messages"])
     # The resumed run wrote nothing: no case progress at all.
-    assert second["outcome"] == "escalation"
-    assert "human specialist" in second["reply"]
+    # With no identifiers established, the fallback asks instead of
+    # escalating silently.
+    assert second["outcome"] == "clarification"
+    assert "order number and item id" in second["reply"]
     assert _stock(shop, "AIRFLOW-RUNNER", "42") == (10, 0)
 
 

@@ -19,7 +19,7 @@ from pathlib import Path
 import neatlogs
 
 from .. import telemetry
-from ..operations import get_case, verify_exchange
+from ..operations import get_case, note_case, verify_exchange
 from .prompts import (
     OUTCOME_ARRANGED,
     OUTCOME_CLARIFICATION,
@@ -227,9 +227,36 @@ def derive_outcome(ctx: AgentContext) -> dict:
         return {"outcome": OUTCOME_ESCALATION, "exchange_id": row["id"],
                 "data": {"reason": _escalation_reason(ctx.db_path, row["id"]),
                          "partial": partial}}
+    return _escalate_no_progress(ctx)
+
+
+def _missing_identifiers(ctx: AgentContext) -> list[str]:
+    """Identifiers the run never established, in plain customer words."""
+    missing = []
+    if not ctx.order_id or not ctx.order_item_id:
+        missing.append("your order number and item id")
+    if not ctx.requested_size:
+        missing.append("the size you need")
+    return missing
+
+
+def _escalate_no_progress(ctx: AgentContext) -> dict:
+    """Fallback when a run ends having proved nothing.
+
+    A tool-less finish with missing identifiers becomes a clarification
+    naming exactly what is absent. Anything else stays an escalation:
+    something was established but the run still went nowhere.
+    """
+    missing = _missing_identifiers(ctx)
+    if missing:
+        question = f"provide {' and '.join(missing)}"
+        note_case(ctx.db_path, case_id=ctx.case_id,
+                  state="needs_information", detail=question)
+        return {"outcome": OUTCOME_CLARIFICATION, "exchange_id": None,
+                "data": {"question": question}}
     return {"outcome": OUTCOME_ESCALATION, "exchange_id": None,
             "data": {"reason": "agent made no progress",
-                     "partial": f"case state {state!r}"}}
+                     "partial": "identifiers present, no effect committed"}}
 
 
 def run_agent(ctx: AgentContext, model=None, checkpointer=None,
@@ -254,22 +281,33 @@ def run_agent(ctx: AgentContext, model=None, checkpointer=None,
                                telemetry.BENCHMARK_VERSION)
             if ctx.consent_size:
                 span.set_attribute("swapdesk.consent_size", ctx.consent_size)
-            result = agent.invoke(
-                {"messages": [{"role": "user",
-                               "content": compose_input(
-                                   ctx.message, ctx.case_id, ctx.run_id,
-                                   ctx.consent_size)}]},
-                config)
-            decided = derive_outcome(ctx)
-            reply = render_reply(decided["outcome"], decided["data"])
-            neatlogs.log("case {case_id} -> {outcome}",
-                         case_id=ctx.case_id, outcome=decided["outcome"])
-            return {"outcome": decided["outcome"],
-                    "exchange_id": decided["exchange_id"],
-                    "reply": reply,
-                    "messages": result["messages"],
-                    "data": decided["data"],
-                    "exporting": telemetry.is_exporting()}
+            try:
+                result = agent.invoke(
+                    {"messages": [{"role": "user",
+                                   "content": compose_input(
+                                       ctx.message, ctx.case_id, ctx.run_id,
+                                       ctx.consent_size)}]},
+                    config)
+                decided = derive_outcome(ctx)
+                reply = render_reply(decided["outcome"], decided["data"])
+                span.set_attribute("swapdesk.outcome",
+                                   decided["outcome"] or "none")
+                neatlogs.log("case {case_id} -> {outcome}",
+                             case_id=ctx.case_id, outcome=decided["outcome"])
+                return {"outcome": decided["outcome"],
+                        "exchange_id": decided["exchange_id"],
+                        "reply": reply,
+                        "messages": result["messages"],
+                        "data": decided["data"],
+                        "exporting": telemetry.is_exporting()}
+            except BaseException as exc:
+                # Mirror model_spans._record_error: mark the workflow span
+                # so failures surface as errors in neatlogs, then re-raise
+                # so worker/queue semantics are unchanged.
+                span.set_attribute("error.type", type(exc).__name__)
+                span.set_attribute("swapdesk.error", str(exc)[:500])
+                span.set_status("ERROR")
+                raise
     finally:
         telemetry.flush()
 
