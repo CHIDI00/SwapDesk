@@ -20,6 +20,12 @@ hackathon.md       Incremental build log and team conventions
 - **Backend** (`src/swapdesk/`) — the agent runtime. Policy checks, atomic stock reservation, idempotent operations, an append-only action journal, a LangGraph tool-using agent, and a FastAPI surface for frontend integration. Deterministic and network-free to test.
 - **Frontend** (`frontend/`) — the ops dashboard (Mission Control, Inbox, Inventory, Integrations, Customer Simulation, ticket detail). It is a **self-contained client-side demo** powered by a mock store — it demos the SwapDesk experience without calling the live API. Its own README lives at [`frontend/README.md`](frontend/README.md).
 
+## Store interface (swapping in a real shop)
+
+The agent never touches the database directly. Every store act goes through the operations layer (`src/swapdesk/operations.py`): `reserve_replacement`, `create_return`, `create_label`, `finalize_arranged`, `release_reservation`, `cancel_exchange`, `escalate_case`, plus read helpers (`get_case`, `verify_exchange`). Policy lives in `policy.py`; all synthetic data lives in `fixtures.py`.
+
+Going live means reimplementing those operations functions against real store APIs. Agent, policy, tools, and frontend stay unchanged — the interface is the contract.
+
 ---
 
 ## What was planned
@@ -186,6 +192,31 @@ Other scripts: `npm run build` (production build), `npm run start`, `npm run lin
 - `eval/harness.py` + `eval/run.py` — isolated database per run; results committed to `eval/results/v1.json`.
 - `src/swapdesk/checker.py` — deterministic per-outcome checks and global invariants, no LLM judge.
 - `docs/EVIDENCE_RUNNER_HARNESS.md` — a controlled live BEFORE/AFTER comparison of the D1 final-sale denial evidence path.
+
+## neatlogs evidence (traces)
+
+Key runs, linked (screenshots committed in case links need a login):
+
+- Full exchange, arranged — [`swapdesk:CASE-78010281`](https://app.neatlogs.com/traces/af5f255accf2a90cddc1ee156206c5a1?orgId=6f406416-c1f3-4f4b-9c4f-8400c3225b67&projectId=51d4aec0-49d6-42b1-b70e-e487294e9aa1): 7 LLM calls, 6 tools, 12.2s, `Status: arranged`.
+
+  ![Arranged exchange trace](docs/evidence/01-arranged-exchange.png)
+
+- Failure invisible, before fix — [`swapdesk:CASE-2e0c351f`](https://app.neatlogs.com/traces/ec9d9803bcfe15947cca589c35182d9f?orgId=6f406416-c1f3-4f4b-9c4f-8400c3225b67&projectId=51d4aec0-49d6-42b1-b70e-e487294e9aa1&returnTo=%2Ftraces%3Fq%3DCASE-2e0c351f%26from%3D2026-09-28T23%253A00%253A00.000Z%26to%3D2026-10-12T22%253A59%253A59.999Z%26orgId%3D6f406416-c1f3-4f4b-9c4f-8400c3225b67%26projectId%3D51d4aec0-49d6-42b1-b70e-e487294e9aa1%26groupBy%3DcreatedAt%26timezone%3DAfrica%252FLagos): failed run recorded as 1 span, 35ms, status success, no detection.
+
+  ![Failure shown as success, before fix](docs/evidence/02-failure-shown-as-success.png)
+
+- Failure visible, after fix — [`swapdesk:CASE-293bf358`](https://app.neatlogs.com/traces/ec878f66c94e41f08066029ce626edc4?orgId=6f406416-c1f3-4f4b-9c4f-8400c3225b67&projectId=51d4aec0-49d6-42b1-b70e-e487294e9aa1&returnTo=%2Ftraces%3Fq%3D%253ACASE-293bf358%26from%3D2026-09-28T23%253A00%253A00.000Z%26to%3D2026-10-12T22%253A59%253A59.999Z%26orgId%3D6f406416-c1f3-4f4b-9c4f-8400c3225b67%26projectId%3D51d4aec0-49d6-42b1-b70e-e487294e9aa1%26groupBy%3DcreatedAt%26timezone%3DAfrica%252FLagos): same budget-exhaustion failure, now status error with Execution Failed detection.
+
+  ![Failure shown as error, after fix](docs/evidence/03-failure-shown-as-error.png)
+
+  Before/after, same failure (`model budget exhausted (0/0 attempts)`) under a controlled fault-injection pair: zero model budget on a test rig, identical trigger both runs — only the telemetry code changed between them.
+
+  | Signal | Before (`CASE-2e0c351f`) | After (`CASE-293bf358`) |
+  | --- | --- | --- |
+  | Trace status | success | error |
+  | Spans | 1, no error data | 1, `error.type` + `swapdesk.error` |
+  | Detections | none | Execution Failed |
+  | Dashboard outcome | failed | failed |
 
 ## Documentation
 
